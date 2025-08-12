@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estratificador ECICEP </title>
+  <meta name="description" content="Sistema de estratificación ECICEP para CESFAM Dr Carlos Diaz Gidi 2025"/>
+  <style>
+    :root{
+      --primary:#0b5ed7; --secondary:#f6f7fb; --border:#e5e7eb; --text:#1f2937; --bg:#fff;
+      --g0:#28a745; --g1:#17a2b8; --g2:#ffc107; --g3:#dc3545; --shadow:0 6px 16px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background:var(--secondary);color:var(--text);margin:0;padding:24px}
+    .container{max-width:1200px;margin:0 auto;background:var(--bg);border-radius:14px;box-shadow:var(--shadow);
+      padding:24px;border:1px solid var(--border)}
+    header h1{margin:0 0 6px;color:var(--primary);text-align:center}
+    header p{margin:0 0 14px;text-align:center;color:#374151}
+    .main{display:grid;grid-template-columns:1fr 340px;gap:24px}
+    @media (max-width:980px){.main{grid-template-columns:1fr}}
+    .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}
+
+    /* details/summary accesibles y robustos */
+    details{border:1px solid var(--border);border-radius:10px;background:#fafafa;margin-top:12px}
+    summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:700;color:#fff;background:var(--primary);
+      border-radius:10px;display:flex;align-items:center;justify-content:space-between}
+    details[open] summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+    .level-wrap{padding:10px 12px;background:#fff;border-top:1px solid var(--border);border-bottom-left-radius:10px;border-bottom-right-radius:10px}
+
+    .sub-details{border:1px solid #dbeafe;border-radius:8px;background:#eef2ff;margin:10px 0}
+    .sub-summary{background:#eef2ff;color:#1e40af;border-radius:8px;padding:8px 12px;font-weight:700;
+      display:flex;align-items:center;justify-content:space-between}
+    .sub-content{padding:8px 10px;background:#fff;border-top:1px solid #dbeafe}
+
+    .row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed #eceff3}
+    .row:last-child{border-bottom:none}
+    .row input[type=checkbox]{width:18px;height:18px}
+    .row label{font-weight:600}
+    .badge{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#fff}
+
+    .cie{margin:8px 0 16px 26px;border:1px dashed #e5e7eb;border-radius:8px;background:#f9fafb}
+    .cie summary{background:#f3f4f6;color:#111827;border-radius:8px;padding:6px 10px}
+    .cie .inner{padding:10px}
+    .cie-table{width:100%;border-collapse:collapse;font-size:.92rem}
+    .cie-table th,.cie-table td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left}
+    .cie-table th{background:#eef2ff;color:#1e3a8a}
+    .cie-help{font-size:.82rem;color:#6b7280;margin-top:4px}
+
+    .results h3{margin:0 0 10px;color:var(--primary);text-align:center;border-bottom:2px solid var(--border);padding-bottom:10px}
+    #score{font-size:3.2em;text-align:center;font-weight:900;margin:10px 0;color:#111827}
+    #glevel{text-align:center;font-weight:900;font-size:2em;margin-bottom:10px;color:#fff;border-radius:8px;padding:6px}
+    #gdesc{font-size:.95em;padding:10px;background:#f8fafc;border-radius:8px;border-left:6px solid}
+    .g0{background-color:var(--g0);border-color:var(--g0)} .g1{background-color:var(--g1);border-color:var(--g1)}
+    .g2{background-color:var(--g2);border-color:var(--g2);color:#111827} .g3{background-color:var(--g3);border-color:var(--g3)}
+    .btn{width:100%;padding:12px;font-size:1.05em;font-weight:800;border:none;border-radius:10px;cursor:pointer;background:#374151;color:#fff;margin-top:10px}
+    footer{margin-top:18px;font-size:.9rem;color:#4b5563;text-align:center}
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Estratificador de Pacientes ECICEP</h1>
+    <p>
+      Sistema de estratificación ECICEP para CESFAM Dr Carlos Diaz Gidi 2025
+    </p>
+
+    <details class="card" open>
+      <summary class="sub-summary">Cómo usarlo</summary>
+      <div class="sub-content">
+        <ol>
+          <li>Abra los bloques de <strong>2 puntos</strong> y <strong>1 punto</strong> y marque las condiciones que correspondan.</li>
+          <li>Para ver el detalle de <strong>CIE-10</strong> (código + diagnóstico), despliegue <em>CIE-10</em> en cada ítem.</li>
+          <li>La tarjeta derecha muestra el <strong>puntaje total</strong> y el <strong>nivel G0–G3</strong> automáticamente.</li>
+          <li>Use <strong>“Limpiar selección”</strong> para reiniciar todo.</li>
+        </ol>
+      </div>
+    </details>
+  </header>
+
+  <div class="main">
+    <div>
+      <div class="card">
+        <h2 style="margin:6px 0 12px">Condiciones crónicas</h2>
+        <div id="list"></div>
+      </div>
+    </div>
+
+    <aside>
+      <div class="card results">
+        <h3>Resultado de Estratificación</h3>
+        <div id="score">0</div>
+        <div id="glevel" class="g0">G0</div>
+        <p id="gdesc" class="g0"><strong>Bajo Riesgo:</strong> Sin patologías con puntaje.</p>
+        <button class="btn" onclick="resetForm()">Limpiar selección</button>
+      </div>
+
+      <footer>
+        Creado por <strong>Diego Ortega Araya</strong> para el <strong>CESFAM Dr. Carlos Díaz Gidi</strong>, San Javier — <strong>12 de agosto de 2025</strong>.
+      </footer>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ==========================
+   Diccionario CIE-10 (embebido)
+   ========================== */
+const CIE = {
+  // Demencia y dependencia
+  "F00":"Demencia en enfermedad de Alzheimer",
+  "F01":"Demencia vascular",
+  "F02":"Demencia en otras enfermedades",
+  "F03":"Demencia, no especificada",
+  "R26":"Anomalías de la marcha y de la movilidad",
+  "Z74":"Necesidad de ayuda para el cuidado personal",
+  "Z99":"Dependencia de aparatos y equipos",
+
+  // Salud mental crítica
+  "F32.2":"Episodio depresivo grave, sin síntomas psicóticos",
+  "F32.3":"Episodio depresivo grave, con síntomas psicóticos",
+  "F33.2":"Trastorno depresivo recurrente, episodio actual grave, sin síntomas psicóticos",
+  "F33.3":"Trastorno depresivo recurrente, episodio actual grave, con síntomas psicóticos",
+  "F20":"Esquizofrenia",
+  "F21":"Trastorno esquizotípico",
+  "F22":"Trastornos delirantes persistentes",
+  "F23":"Trastornos psicóticos agudos y transitorios",
+
+  // ECV/ACV y cardiopatía isquémica
+  "I60":"Hemorragia subaracnoidea",
+  "I61":"Hemorragia intracerebral",
+  "I63":"Infarto cerebral",
+  "I64":"Accidente cerebrovascular agudo, no especificado",
+  "I69":"Secuelas de enfermedades cerebrovasculares",
+  "G45":"Ataques isquémicos transitorios",
+  "G46":"Síndromes vasculares cerebrales",
+  "I20":"Angina de pecho",
+  "I21":"Infarto agudo de miocardio",
+  "I22":"Infarto subsecuente de miocardio",
+  "I25":"Cardiopatía isquémica crónica",
+
+  // Diabetes complicadas (E10–E14 .2 .3 .4 .5 .7)
+  "E10.2":"Diabetes tipo 1 con complicaciones renales",
+  "E10.3":"Diabetes tipo 1 con complicaciones oftálmicas",
+  "E10.4":"Diabetes tipo 1 con complicaciones neurológicas",
+  "E10.5":"Diabetes tipo 1 con complicaciones circulatorias periféricas",
+  "E10.7":"Diabetes tipo 1 con complicaciones múltiples",
+  "E11.2":"Diabetes tipo 2 con complicaciones renales",
+  "E11.3":"Diabetes tipo 2 con complicaciones oftálmicas",
+  "E11.4":"Diabetes tipo 2 con complicaciones neurológicas",
+  "E11.5":"Diabetes tipo 2 con complicaciones circulatorias periféricas",
+  "E11.7":"Diabetes tipo 2 con complicaciones múltiples",
+  "E12.2":"Diabetes por desnutrición con complicaciones renales",
+  "E12.3":"Diabetes por desnutrición con complicaciones oftálmicas",
+  "E12.4":"Diabetes por desnutrición con complicaciones neurológicas",
+  "E12.5":"Diabetes por desnutrición con complicaciones circulatorias periféricas",
+  "E12.7":"Diabetes por desnutrición con complicaciones múltiples",
+  "E13.2":"Otras diabetes especificadas con complicaciones renales",
+  "E13.3":"Otras diabetes especificadas con complicaciones oftálmicas",
+  "E13.4":"Otras diabetes especificadas con complicaciones neurológicas",
+  "E13.5":"Otras diabetes especificadas con complicaciones circulatorias periféricas",
+  "E13.7":"Otras diabetes especificadas con complicaciones múltiples",
+  "E14.2":"Diabetes no especificada con complicaciones renales",
+  "E14.3":"Diabetes no especificada con complicaciones oftálmicas",
+  "E14.4":"Diabetes no especificada con complicaciones neurológicas",
+  "E14.5":"Diabetes no especificada con complicaciones circulatorias periféricas",
+  "E14.7":"Diabetes no especificada con complicaciones múltiples",
+
+  // ERC
+  "N18.1":"Enfermedad renal crónica, estadio 1",
+  "N18.2":"Enfermedad renal crónica, estadio 2",
+  "N18.3":"Enfermedad renal crónica, estadio 3",
+  "N18.4":"Enfermedad renal crónica, estadio 4",
+  "N18.5":"Enfermedad renal crónica, estadio 5",
+  "N18.6":"Enfermedad renal terminal",
+
+  // Salud mental y conductual (1 punto)
+  "F32.0":"Episodio depresivo leve",
+  "F32.1":"Episodio depresivo moderado",
+  "F33.0":"Depresión recurrente, episodio actual leve",
+  "F33.1":"Depresión recurrente, episodio actual moderado",
+  "F40":"Trastornos de ansiedad fóbica",
+  "F41":"Otros trastornos de ansiedad",
+  "F10":"Trastornos debidos al alcohol",
+  "Z71.4":"Consejería relacionada con el alcohol",
+  "Z72.1":"Uso perjudicial de alcohol",
+  "F17":"Trastornos debidos al uso de tabaco",
+  "Z72.0":"Uso de tabaco",
+  "Z71.6":"Consejería por consumo de tabaco",
+  "Z72.2":"Uso de drogas",
+  "F50":"Trastornos de la ingestión de alimentos",
+  "R45.8":"Otros síntomas relativos al estado emocional (incluye ideación suicida)",
+  "T74":"Síndromes del maltrato",
+  "Y07":"Maltrato por parte de otras personas",
+  "Z55":"Problemas con educación y alfabetización",
+  "Z56":"Problemas de empleo y desempleo",
+  "Z59":"Problemas de vivienda y condiciones económicas",
+  "Z60":"Problemas del entorno social",
+
+  // Cardiometabólico y renal
+  "E78":"Trastornos del metabolismo de las lipoproteínas",
+  "I10":"Hipertensión esencial (primaria)",
+  "I11":"Enfermedad cardíaca hipertensiva",
+  "I12":"Enfermedad renal hipertensiva",
+  "I13":"Enfermedad cardiorrenal hipertensiva",
+  "I15":"Hipertensión secundaria",
+  "I47":"Taquicardia paroxística",
+  "I48":"Fibrilación y aleteo auricular",
+  "I49":"Otras arritmias cardíacas",
+  "I50":"Insuficiencia cardíaca",
+  "E66":"Obesidad",
+
+  // Respiratorio
+  "J41":"Bronquitis crónica simple y mucopurulenta",
+  "J42":"Bronquitis crónica no especificada",
+  "J43":"Enfisema",
+  "J44":"Otras enfermedades pulmonares obstructivas crónicas",
+  "J45":"Asma",
+  "J46":"Estado asmático",
+
+  // Neurológico
+  "G40":"Epilepsia",
+  "G35":"Esclerosis múltiple",
+  "G20":"Enfermedad de Parkinson",
+  "G21":"Parkinsonismo secundario",
+  "G22":"Parkinsonismo en enfermedades clasificadas en otra parte",
+  "G50":"Trastornos del trigémino",
+  "G51":"Trastornos del nervio facial",
+  "G52":"Trastornos de otros pares craneales",
+  "G53":"Trastornos de pares craneales en enfermedades clasificadas en otra parte",
+  "G54":"Trastornos de raíces y plexos nerviosos",
+  "G55":"Compresión de raíces y plexos nerviosos",
+  "G56":"Mononeuropatías de miembros superiores",
+  "G57":"Mononeuropatías de miembros inferiores",
+  "G58":"Otras mononeuropatías",
+  "G59":"Mononeuropatías en enfermedades clasificadas en otra parte",
+
+  // Musculoesquelético y reuma
+  "M05":"Artritis reumatoide seropositiva",
+  "M06":"Otras artritis reumatoides",
+  "M15":"Poliartrosis",
+  "M16":"Coxartrosis (artrosis de cadera)",
+  "M17":"Gonartrosis (artrosis de rodilla)",
+  "M18":"Artrosis de la primera articulación carpometacarpiana",
+  "M19":"Otras artrosis",
+  "M79.7":"Fibromialgia",
+
+  // Sistémicas y otras
+  "D50":"Anemia por deficiencia de hierro",
+  "D51":"Anemia por deficiencia de vitamina B12",
+  "D52":"Anemia por deficiencia de folato",
+  "D53":"Otras anemias nutricionales",
+  "D55":"Anemia debida a trastornos enzimáticos",
+  "D56":"Talassemia",
+  "D57":"Anemia de células falciformes",
+  "D58":"Otras anemias hemolíticas hereditarias",
+  "D59":"Anemia hemolítica adquirida",
+  "D60":"Aplasia pura de células rojas",
+  "D61":"Otras anemias aplásicas",
+  "D62":"Anemia posthemorrágica aguda",
+  "D63":"Anemia en enfermedades crónicas",
+  "D64":"Otras anemias",
+  "B18":"Hepatitis viral crónica",
+  "K70":"Enfermedad hepática alcohólica",
+  "K71":"Enfermedad hepática tóxica",
+  "K72":"Insuficiencia hepática",
+  "K73":"Hepatitis crónica",
+  "K74":"Fibrosis y cirrosis hepáticas",
+  "K75":"Otras enfermedades inflamatorias del hígado",
+  "K76":"Otras enfermedades del hígado",
+  "K77":"Trastornos del hígado en otras enfermedades",
+  "H90":"Hipoacusia conductiva y neurosensorial",
+  "H91":"Otras hipoacusias",
+  "B20":"Enfermedad por VIH con infecciones",
+  "B21":"Enfermedad por VIH con neoplasias malignas",
+  "B22":"Enfermedad por VIH con otras enfermedades especificadas",
+  "B23":"Enfermedad por VIH con otras afecciones",
+  "B24":"Enfermedad por VIH no especificada",
+  "L93":"Lupus eritematoso cutáneo",
+  "M32":"Lupus eritematoso sistémico",
+  "L97":"Úlcera de miembro inferior",
+  "L98.4":"Úlcera crónica de la piel, no especificada",
+
+  // Neoplasias malignas (C00–C97, 3 caracteres)
+  "C00":"Neoplasia maligna del labio","C01":"Neoplasia maligna de la base de la lengua","C02":"Neoplasia maligna de otras partes de la lengua",
+  "C03":"Neoplasia maligna de la encía","C04":"Neoplasia maligna del piso de la boca","C05":"Neoplasia maligna del paladar",
+  "C06":"Neoplasia maligna de otras partes y no especificadas de la boca","C07":"Neoplasia maligna de la glándula parótida",
+  "C08":"Neoplasia maligna de otras glándulas salivales mayores","C09":"Neoplasia maligna de la amígdala","C10":"Neoplasia maligna de la orofaringe",
+  "C11":"Neoplasia maligna de la nasofaringe","C12":"Neoplasia maligna del seno piriforme","C13":"Neoplasia maligna de la hipofaringe",
+  "C14":"Neoplasia maligna de sitios mal definidos de labio, cavidad bucal y faringe","C15":"Neoplasia maligna del esófago",
+  "C16":"Neoplasia maligna del estómago","C17":"Neoplasia maligna del intestino delgado","C18":"Neoplasia maligna del colon",
+  "C19":"Neoplasia maligna de la unión rectosigmoidea","C20":"Neoplasia maligna del recto","C21":"Neoplasia maligna del ano y conducto anal",
+  "C22":"Neoplasia maligna del hígado y vías biliares intrahepáticas","C23":"Neoplasia maligna de la vesícula biliar",
+  "C24":"Neoplasia maligna de otras partes y no especificadas de las vías biliares","C25":"Neoplasia maligna del páncreas",
+  "C26":"Neoplasia maligna de otros y mal definidos del tracto digestivo","C30":"Neoplasia maligna de la cavidad nasal y del oído medio",
+  "C31":"Neoplasia maligna de los senos paranasales","C32":"Neoplasia maligna de la laringe","C33":"Neoplasia maligna de la tráquea",
+  "C34":"Neoplasia maligna de bronquios y pulmón","C37":"Neoplasia maligna del timo","C38":"Neoplasia maligna del corazón, mediastino y pleura",
+  "C39":"Neoplasia maligna de otros y mal definidos del tórax respiratorio","C40":"Neoplasia maligna de huesos y cartílago articular de miembros",
+  "C41":"Neoplasia maligna de huesos y cartílago articular de otros sitios","C43":"Melanoma maligno de la piel","C44":"Otros tumores malignos de la piel",
+  "C45":"Mesotelioma","C46":"Sarcoma de Kaposi","C47":"Neoplasia maligna de nervios periféricos y sistema nervioso autónomo",
+  "C48":"Neoplasia maligna de retroperitoneo y peritoneo","C49":"Neoplasia maligna de otros tejidos conjuntivos y blandos",
+  "C50":"Neoplasia maligna de la mama","C51":"Neoplasia maligna de la vulva","C52":"Neoplasia maligna de la vagina",
+  "C53":"Neoplasia maligna del cuello uterino","C54":"Neoplasia maligna del cuerpo del útero","C55":"Neoplasia maligna del útero, no especificado",
+  "C56":"Neoplasia maligna del ovario","C57":"Neoplasia maligna de otros órganos genitales femeninos","C58":"Neoplasia maligna de la placenta",
+  "C60":"Neoplasia maligna del pene","C61":"Neoplasia maligna de la próstata","C62":"Neoplasia maligna del testículo",
+  "C63":"Neoplasia maligna de otros órganos genitales masculinos","C64":"Neoplasia maligna del riñón, excepto pelvis renal",
+  "C65":"Neoplasia maligna de la pelvis renal","C66":"Neoplasia maligna del uréter","C67":"Neoplasia maligna de la vejiga",
+  "C68":"Neoplasia maligna de otros órganos urinarios","C69":"Neoplasia maligna del ojo y anexos","C70":"Neoplasia maligna de las meninges",
+  "C71":"Neoplasia maligna del encéfalo","C72":"Neoplasia maligna de la médula espinal, nervios craneales y otras partes del SNC",
+  "C73":"Neoplasia maligna de la tiroides","C74":"Neoplasia maligna de la glándula suprarrenal",
+  "C75":"Neoplasia maligna de otras glándulas endocrinas y estructuras afines","C76":"Neoplasia maligna de sitios mal definidos",
+  "C77":"Neoplasia maligna secundaria y no especificada de ganglios linfáticos","C78":"Neoplasia maligna secundaria de órganos respiratorios y digestivos",
+  "C79":"Neoplasia maligna secundaria de otros sitios","C80":"Neoplasia maligna, sin especificar","C81":"Enfermedad de Hodgkin",
+  "C82":"Linfoma no Hodgkin folicular","C83":"Otros linfomas no Hodgkin","C84":"Linfomas de células T y NK",
+  "C85":"Otros linfomas no Hodgkin, especificados o no especificados","C86":"Otros linfomas de células T/NK especificados",
+  "C88":"Otras enfermedades inmunoproliferativas malignas","C90":"Mieloma múltiple y neoplasias plasmáticas malignas",
+  "C91":"Leucemia linfoblástica","C92":"Leucemia mieloide","C93":"Leucemia monocítica","C94":"Otras leucemias de células especificadas",
+  "C95":"Leucemia de células no especificadas","C96":"Otras neoplasias malignas del tejido linfoide, hematopoyético y afines",
+  "C97":"Neoplasias malignas de sitios múltiples independientes"
+};
+
+/* ==========================
+   Grupos, subgrupos e ítems
+   ========================== */
+const GROUPS = [
+  {
+    points:2,
+    title:'Condiciones que suman 2 puntos',
+    subgroups:[
+      {
+        name:'Neurológico y dependencia',
+        items:[
+          {id:'demencia',    name:'Demencia',                             codes:['F00','F01','F02','F03']},
+          {id:'dependencia', name:'Discapacidad / dependencia funcional', codes:['R26','Z74','Z99']}
+        ]
+      },
+      {
+        name:'Salud mental crítica',
+        items:[
+          {id:'dep_grave', name:'Depresión grave (psicótica / refractaria / alto riesgo)', codes:['F32.2','F32.3','F33.2','F33.3']},
+          {id:'psicosis',  name:'Espectro de esquizofrenia y psicosis',                   codes:['F20','F21','F22','F23']}
+        ]
+      },
+      {
+        name:'Eventos cardiovasculares agudos / secuelas',
+        items:[
+          {id:'acv', name:'Enfermedad cerebrovascular (ACV/AVE) o secuelas', codes:['I60','I61','I63','I64','I69','G45','G46']},
+          {id:'iam', name:'Cardiopatía isquémica (IAM, angina, EC crónica)', codes:['I20','I21','I22','I25']}
+        ]
+      },
+      {
+        name:'Crónicos avanzados',
+        items:[
+          {id:'dm_comp', name:'Diabetes mellitus con complicaciones severas', codes:[
+            'E10.2','E10.3','E10.4','E10.5','E10.7',
+            'E11.2','E11.3','E11.4','E11.5','E11.7',
+            'E12.2','E12.3','E12.4','E12.5','E12.7',
+            'E13.2','E13.3','E13.4','E13.5','E13.7',
+            'E14.2','E14.3','E14.4','E14.5','E14.7'
+          ]},
+          {id:'erc_av',  name:'Enfermedad renal crónica avanzada (IV–V o terminal)', codes:['N18.4','N18.5','N18.6']}
+        ]
+      }
+    ]
+  },
+  {
+    points:1,
+    title:'Condiciones que suman 1 punto',
+    subgroups:[
+      {
+        name:'Salud mental y conductual',
+        items:[
+          {id:'dep_leve',    name:'Depresión leve o moderada',                 codes:['F32.0','F32.1','F33.0','F33.1']},
+          {id:'ansiedad',    name:'Trastornos de ansiedad',                    codes:['F40','F41']},
+          {id:'alcohol',     name:'Trastorno por consumo de alcohol',          codes:['F10','Z71.4','Z72.1']},
+          {id:'tabaquismo',  name:'Tabaquismo',                                codes:['F17','Z72.0','Z71.6']},
+          {id:'drogas',      name:'Trastorno por consumo de drogas',           codes:['F11','F12','F13','F14','F15','F16','F18','F19','Z72.2']},
+          {id:'tca',         name:'Trastornos de la conducta alimentaria',     codes:['F50']},
+          {id:'ideacion',    name:'Ideación suicida (actual o reciente)',      codes:['R45.8']},
+          {id:'vif',         name:'Violencia intrafamiliar / abuso sexual',    codes:['T74','Y07']},
+          {id:'psicosocial', name:'Problemas psicosociales / socioeconómicos', codes:['Z55','Z56','Z59','Z60','Z62','Z63','Z64','Z65']}
+        ]
+      },
+      {
+        name:'Cardiometabólico y renal',
+        items:[
+          {id:'dislipidemia', name:'Dislipidemia',                 codes:['E78']},
+          {id:'hta',          name:'Hipertensión arterial',        codes:['I10','I11','I12','I13','I15']},
+          {id:'arritmias',    name:'Arritmias (FA/flutter y otras)',codes:['I47','I48','I49']},
+          {id:'insuf_card',   name:'Insuficiencia cardíaca',       codes:['I50']},
+          {id:'erc_i_iii',    name:'ERC (estadios I–III)',         codes:['N18.1','N18.2','N18.3']},
+          {id:'obesidad',     name:'Obesidad',                     codes:['E66']}
+        ]
+      },
+      {
+        name:'Respiratorio',
+        items:[
+          {id:'asma', name:'Asma', codes:['J45','J46']},
+          {id:'epoc', name:'EPOC', codes:['J41','J42','J43','J44']}
+        ]
+      },
+      {
+        name:'Neurológico',
+        items:[
+          {id:'epilepsia',   name:'Epilepsia',           codes:['G40']},
+          {id:'em',          name:'Esclerosis múltiple', codes:['G35']},
+          {id:'parkinson',   name:'Parkinsonismo',       codes:['G20','G21','G22']},
+          {id:'dolor_neuro', name:'Dolor neuropático',   codes:['G50','G51','G52','G53','G54','G55','G56','G57','G58','G59']}
+        ]
+      },
+      {
+        name:'Musculoesquelético y reumatología',
+        items:[
+          {id:'ar',         name:'Artritis reumatoide',                   codes:['M05','M06']},
+          {id:'artrosis',   name:'Artrosis (rodilla, cadera u otras)',    codes:['M15','M16','M17','M18','M19']},
+          {id:'fibromialgia',name:'Fibromialgia',                         codes:['M79.7']}
+        ]
+      },
+      {
+        name:'Sistémicas y otras crónicas',
+        items:[
+          {id:'anemia',     name:'Anemia crónica',                        codes:['D50','D51','D52','D53','D55','D56','D57','D58','D59','D60','D61','D62','D63','D64']},
+          {id:'cancer',     name:'Neoplasia maligna',                     codes:[
+            'C00','C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14',
+            'C15','C16','C17','C18','C19','C20','C21','C22','C23','C24','C25','C26','C30','C31','C32','C33','C34','C37','C38','C39','C40','C41','C43','C44','C45','C46','C47','C48','C49','C50','C51','C52','C53','C54','C55','C56','C57','C58','C60','C61','C62','C63','C64','C65','C66','C67','C68','C69','C70','C71','C72','C73','C74','C75','C76','C77','C78','C79','C80','C81','C82','C83','C84','C85','C86','C88','C90','C91','C92','C93','C94','C95','C96','C97'
+          ]},
+          {id:'hepatico',   name:'Enfermedad hepática crónica',           codes:['B18','K70','K71','K72','K73','K74','K75','K76','K77']},
+          {id:'hipoacusia', name:'Presbiacusia / hipoacusia / sordera',   codes:['H90','H91']},
+          {id:'vih',        name:'Infección por VIH / SIDA',              codes:['B20','B21','B22','B23','B24']},
+          {id:'lupus',      name:'Lupus',                                  codes:['L93','M32']},
+          {id:'ulcera',     name:'Úlcera crónica de la piel',             codes:['L97','L98.4']}
+        ]
+      }
+    ]
+  }
+];
+
+/* ==========================
+   Render de UI
+   ========================== */
+const $ = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+
+function el(tag, props={}, children=[]){
+  const n=document.createElement(tag);
+  Object.entries(props).forEach(([k,v])=>{
+    if(k==='class') n.className=v;
+    else if(k==='text') n.textContent=v;
+    else if(k==='html') n.innerHTML=v;
+    else n[k]=v;
+  });
+  children.forEach(c=>n.appendChild(c));
+  return n;
+}
+
+function buildCieTable(codes){
+  const wrap=el('div');
+  const table=el('table',{class:'cie-table'});
+  const thead=el('thead');
+  thead.appendChild(el('tr',{},[el('th',{text:'Código'}),el('th',{text:'Diagnóstico'})]));
+  table.appendChild(thead);
+  const tbody=el('tbody');
+  (codes||[]).forEach(code=>{
+    const label = CIE[code] || '(descripción no disponible)';
+    const tr=el('tr');
+    tr.appendChild(el('td',{text:code}));
+    tr.appendChild(el('td',{text:label}));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  wrap.appendChild(el('div',{class:'cie-help',text:'Listado según CIE-10 2017, MINSAL.'}));
+  return wrap;
+}
+
+function buildUI(){
+  const root = $('#list'); root.innerHTML='';
+  GROUPS.forEach(g=>{
+    const det=el('details');
+    const sum=el('summary',{html:`${g.title} <span class="small">(+${g.points} pts c/u)</span>`});
+    det.appendChild(sum);
+    const wrap=el('div',{class:'level-wrap'});
+
+    g.subgroups.forEach(sg=>{
+      const sd=el('details',{class:'sub-details'});
+      const ss=el('summary',{class:'sub-summary',text:sg.name});
+      sd.appendChild(ss);
+      const sc=el('div',{class:'sub-content'});
+
+      sg.items.forEach(it=>{
+        const row=el('div',{class:'row'});
+        const cb = el('input',{type:'checkbox',id:it.id});
+        cb.dataset.score=g.points;
+        cb.addEventListener('change',calcScore);
+        const lab=el('label',{htmlFor:it.id,text:it.name});
+        const badge=el('span',{class:'badge',text:`+${g.points}`});
+        row.appendChild(cb); row.appendChild(lab); row.appendChild(badge);
+
+        const cieDet=el('details',{class:'cie'});
+        const cieSum=el('summary',{text:'CIE-10'});
+        const inner=el('div',{class:'inner'});
+        inner.appendChild(buildCieTable(it.codes||[]));
+        cieDet.appendChild(cieSum); cieDet.appendChild(inner);
+
+        sc.appendChild(row); sc.appendChild(cieDet);
+      });
+
+      sd.appendChild(sc);
+      wrap.appendChild(sd);
+    });
+
+    det.appendChild(wrap);
+    root.appendChild(det);
+  });
+
+  // pruebas automáticas (solo consola, sin UI)
+  runConsoleTests();
+}
+
+/* ==========================
+   Puntaje y nivel G
+   ========================== */
+function calcScore(){
+  let total=0;
+  $$('#list input[type=checkbox]').forEach(cb=>{
+    if(cb.checked) total += parseInt(cb.dataset.score,10);
+  });
+  const score=$('#score'), gl=$('#glevel'), gd=$('#gdesc');
+  score.textContent=total;
+
+  let lvl='G0', cls='g0', desc='<strong>Bajo Riesgo:</strong> Sin patologías con puntaje.';
+  if(total>=5){ lvl='G3'; cls='g3'; desc='<strong>Alto Riesgo:</strong> Requiere manejo multidisciplinario y coordinación estrecha.'; }
+  else if(total>=2){ lvl='G2'; cls='g2'; desc='<strong>Riesgo Moderado:</strong> Manejo integral en APS y posible coordinación con especialidades.'; }
+  else if(total===1){ lvl='G1'; cls='g1'; desc='<strong>Riesgo Bajo a Moderado:</strong> Una condición con puntaje; control según patología.'; }
+
+  gl.textContent=lvl; gd.innerHTML=desc;
+  ['g0','g1','g2','g3'].forEach(c=>{gl.classList.remove(c);gd.classList.remove(c);});
+  gl.classList.add(cls); gd.classList.add(cls);
+}
+function resetForm(){
+  $$('#list input[type=checkbox]').forEach(cb=>cb.checked=false);
+  calcScore();
+}
+
+/* ==========================
+   Pruebas (solo consola)
+   ========================== */
+function tAssert(name, fn){
+  try{
+    const ok = !!fn();
+    console[ok?'log':'error'](`${ok?'[OK]':'[FALLA]'} ${name}`);
+    return ok;
+  }catch(e){
+    console.error(`[ERROR] ${name}:`, e);
+    return false;
+  }
+}
+function runConsoleTests(){
+  // 1) HTA incluye 5 códigos
+  tAssert('HTA: I10,I11,I12,I13,I15 presentes', ()=>['I10','I11','I12','I13','I15'].every(c=>CIE[c]));
+  // 2) EPOC incluye J41–J44
+  tAssert('EPOC: J41–J44 presentes', ()=>['J41','J42','J43','J44'].every(c=>CIE[c]));
+  // 3) Demencia F00–F03
+  tAssert('Demencia: F00–F03 presentes', ()=>['F00','F01','F02','F03'].every(c=>CIE[c]));
+  // 4) ERC I–III N18.1–N18.3
+  tAssert('ERC I–III: N18.1–N18.3 presentes', ()=>['N18.1','N18.2','N18.3'].every(c=>CIE[c]));
+  // 5) Neoplasias extremos C00 y C97
+  tAssert('Neoplasias: C00 y C97 presentes', ()=>CIE['C00'] && CIE['C97']);
+  // 6) Diabetes complicadas representativas
+  tAssert('DM complicadas: E10.2 y E14.7 presentes', ()=>CIE['E10.2'] && CIE['E14.7']);
+  // 7) Dolor neuropático G50–G59 completo
+  tAssert('Dolor neuropático: G50–G59 completo', ()=>['G50','G51','G52','G53','G54','G55','G56','G57','G58','G59'].every(c=>CIE[c]));
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  buildUI();
+  calcScore();
+});
+</script>
+</body>
+</html>
+
