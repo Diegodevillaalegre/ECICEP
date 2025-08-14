@@ -96,7 +96,7 @@
       </div>
 
       <footer>
-        Creado por <strong>Diego Ortega Araya</strong> para el <strong>CESFAM Dr. Carlos Díaz Gidi</strong>, San Javier — <strong>12 de agosto de 2025</strong>.
+        Creado por <strong>Diego Ortega Araya</strong> para el <strong>CESFAM Dr. Carlos Díaz Gidi</strong>, San Javier — <strong>14 de agosto de 2025</strong>.
       </footer>
     </aside>
   </div>
@@ -187,17 +187,19 @@ const CIE = {
   "F17":"Trastornos debidos al uso de tabaco",
   "Z72.0":"Uso de tabaco",
   "Z71.6":"Consejería por consumo de tabaco",
-  "Z72.2":"Uso de drogas",
-  "F50":"Trastornos de la ingestión de alimentos",
-  "R45.8":"Otros síntomas relativos al estado emocional (incluye ideación suicida)",
-  "T74":"Síndromes del maltrato",
-  "Y07":"Maltrato por parte de otras personas",
-  "Z55":"Problemas con educación y alfabetización",
-  "Z56":"Problemas de empleo y desempleo",
-  "Z59":"Problemas de vivienda y condiciones económicas",
-  "Z60":"Problemas del entorno social",
 
-  // Cardiometabólico y renal
+  /* === Drogas: añadidos que faltaban === */
+  "F11":"Trastornos mentales y del comportamiento debidos al consumo de opiáceos",
+  "F12":"Trastornos mentales y del comportamiento debidos al consumo de cannabinoides",
+  "F13":"Trastornos mentales y del comportamiento debidos al consumo de sedantes o hipnóticos",
+  "F14":"Trastornos mentales y del comportamiento debidos al consumo de cocaína",
+  "F15":"Trastornos mentales y del comportamiento debidos al consumo de otros estimulantes (incluida la cafeína)",
+  "F16":"Trastornos mentales y del comportamiento debidos al consumo de alucinógenos",
+  "F18":"Trastornos mentales y del comportamiento debidos al consumo de disolventes volátiles",
+  "F19":"Trastornos mentales y del comportamiento debidos al consumo de múltiples drogas y otras sustancias psicoactivas",
+  "Z72.2":"Uso de drogas",
+
+  // Respiratorio
   "E78":"Trastornos del metabolismo de las lipoproteínas",
   "I10":"Hipertensión esencial (primaria)",
   "I11":"Enfermedad cardíaca hipertensiva",
@@ -570,6 +572,9 @@ function runConsoleTests(){
   tAssert('DM complicadas: E10.2 y E14.7 presentes', ()=>CIE['E10.2'] && CIE['E14.7']);
   // 7) Dolor neuropático G50–G59 completo
   tAssert('Dolor neuropático: G50–G59 completo', ()=>['G50','G51','G52','G53','G54','G55','G56','G57','G58','G59'].every(c=>CIE[c]));
+  // 8) Drogas: F11,F12,F13,F14,F15,F16,F18,F19,Z72.2 presentes
+  tAssert('Drogas: F11,F12,F13,F14,F15,F16,F18,F19,Z72.2 presentes',
+    ()=>['F11','F12','F13','F14','F15','F16','F18','F19','Z72.2'].every(c=>CIE[c]));
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
