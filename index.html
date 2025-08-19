@@ -133,81 +133,55 @@ function normalize(s){ return (s||'').toString().toLowerCase().normalize('NFD').
    Nota: si hay subcategoría (p.ej., F33.2) y no existe rótulo específico,
    se resuelve al rótulo del código base (F33) → nunca queda vacío. */
 const CIE = {
-  // Alcohol / Tabaco / Drogas
-  "F10":"Trastornos debidos al alcohol",
-  "Y91.2":"Efectos del alcohol (intoxicación moderada)","Y91.3":"Efectos del alcohol (grave)","Y91.9":"Efectos del alcohol (NE)",
-  "Z71.4":"Consejería por alcohol","Z72.1":"Uso de alcohol",
-  "F17":"Trastornos debidos al uso de tabaco","T65.2":"Efecto tóxico de nicotina","Z71.6":"Consejería por tabaco","Z72.0":"Uso de tabaco",
-  "F11":"Trastornos por opiáceos","F12":"Trastornos por cannabinoides","F13":"Trastornos por sedantes/hipnóticos",
-  "F14":"Trastornos por cocaína","F15":"Trastornos por estimulantes","F16":"Trastornos por alucinógenos",
-  "F18":"Trastornos por disolventes","F19":"Trastornos por múltiples drogas","Z72.2":"Uso de drogas",
+  // GRUPO 2 PUNTOS
+  "F00":"Demencia en la enfermedad de Alzheimer", "F01":"Demencia vascular", "F02":"Demencia en otras enfermedades clasificadas en otra parte", "F03":"Demencia, no especificada",
+  "F33":"Trastorno depresivo recurrente", "F33.2":"Trastorno depresivo recurrente, episodio actual grave sin síntomas psicóticos", "F33.3":"Trastorno depresivo recurrente, episodio actual grave con síntomas psicóticos",
+  "F20":"Esquizofrenia", "F21":"Trastorno esquizotípico", "F22":"Trastornos de ideas delirantes persistentes", "F23":"Trastornos psicóticos agudos y transitorios",
+  "G46":"Síndromes vasculares cerebrales en enfermedades cerebrovasculares", "I64":"Accidente vascular cerebral, no especificado como hemorrágico o isquémico", "I67":"Otras enfermedades cerebrovasculares", "I68":"Trastornos cerebrovasculares en enfermedades clasificadas en otra parte",
+  "I20":"Angina de pecho", "I21":"Infarto agudo de miocardio", "I22":"Infarto de miocardio subsecuente", "I25":"Enfermedad isquémica crónica del corazón", "I51":"Complicaciones y descripciones mal definidas de la enfermedad del corazón", "I52":"Otras afecciones cardíacas en enfermedades clasificadas en otra parte",
+  "E10":"Diabetes mellitus insulinodependiente", "E11":"Diabetes mellitus no insulinodependiente", "E12":"Diabetes mellitus relacionada con la malnutrición", "E13":"Otras diabetes mellitus especificadas", "E14":"Diabetes mellitus, no especificada",
+  "N18":"Enfermedad renal crónica", "N18.4":"Enfermedad renal crónica, estadio 4", "N18.5":"Enfermedad renal crónica, estadio 5", "N18.6":"Enfermedad renal en etapa terminal",
+  "R26":"Anomalías de la marcha y de la movilidad", "Z74":"Problemas relacionados con la dependencia del prestador de cuidados", "Z99":"Dependencia de máquinas y dispositivos de apoyo",
 
-  // Salud mental
-  "F33":"Trastorno depresivo recurrente",
+  // GRUPO 1 PUNTO
+  "F10":"Trastornos mentales y del comportamiento debidos al uso de alcohol", "Y91":"Evidencia de alcoholismo determinada por el nivel de alcohol en la sangre", "Z71.4":"Asesoramiento y supervisión por abuso de alcohol", "Z72.1":"Problemas relacionados con el uso de alcohol",
+  "F17":"Trastornos mentales y del comportamiento debidos al uso de tabaco", "T65.2":"Efecto tóxico del tabaco y la nicotina", "Z71.6":"Asesoramiento por abuso de tabaco", "Z72.0":"Problemas relacionados con el uso de tabaco",
+  "F11":"Trastornos por uso de opiáceos", "F12":"Trastornos por uso de cannabinoides", "F13":"Trastornos por uso de sedantes o hipnóticos", "F14":"Trastornos por uso de cocaína", "F15":"Trastornos por uso de otros estimulantes, incluida la cafeína", "F16":"Trastornos por uso de alucinógenos", "F18":"Trastornos por uso de disolventes volátiles", "F19":"Trastornos por uso de múltiples drogas y otras sustancias psicoactivas", "Z72.2":"Problemas relacionados con el uso de drogas",
+  "D50":"Anemia por deficiencia de hierro", "D51":"Anemia por deficiencia de vitamina B12", "D52":"Anemia por deficiencia de folato", "D53":"Otras anemias nutricionales", "D55":"Anemia debida a trastornos enzimáticos", "D56":"Talasemia", "D57":"Trastornos falciformes", "D58":"Otras anemias hemolíticas hereditarias", "D59":"Anemia hemolítica adquirida", "D60":"Aplasia pura de glóbulos rojos, adquirida", "D61":"Otras anemias aplásicas", "D62":"Anemia posthemorrágica aguda", "D63":"Anemia en enfermedades crónicas clasificadas en otra parte", "D64":"Otras anemias",
   "F50":"Trastornos de la conducta alimentaria",
-  "F40":"Trastornos de ansiedad fóbica","F41":"Otros trastornos de ansiedad","F42":"Trastorno obsesivo-compulsivo",
-  "F60":"Trastornos específicos de la personalidad","F61":"Trastorno mixto de la personalidad",
-  "F62":"Cambios perdurables de la personalidad","F68":"Otros trastornos de la personalidad","F69":"Trastorno de la personalidad NE",
-  "F51":"Trastornos del sueño no orgánicos","G47":"Trastornos del sueño (orgánicos)",
-  "F31":"Trastorno afectivo bipolar","F34":"Trastornos del humor persistentes",
-  "F63":"Trastornos de los hábitos e impulsos","F66":"Trastornos de la identidad/desarrollo sexual",
-  "F70":"Retraso mental leve","F71":"Retraso mental moderado","F72":"Retraso mental grave","F73":"Retraso mental profundo",
-  "F78":"Otros retrasos mentales","F79":"Retraso mental NE",
-  "F00":"Demencia en enfermedad de Alzheimer","F01":"Demencia vascular","F02":"Demencia en otras enfermedades","F03":"Demencia NE",
-  "F20":"Esquizofrenia","F21":"Trastorno esquizotípico","F22":"Trastornos delirantes persistentes","F23":"Psicosis aguda/transitoria",
-
-  // Neurológico
-  "G45":"Ataques isquémicos transitorios (TIA)","G46":"Síndromes vasculares encefálicos",
-  "G40":"Epilepsia","G35":"Esclerosis múltiple",
-  "G20":"Enfermedad de Parkinson","G21":"Parkinsonismo secundario","G22":"Parkinsonismo en otras enfermedades",
-  "G23":"Trastornos de ganglios basales","G24":"Distonías","G25":"Otros extrapiramidales","G26":"Extrapiramidales en otras enfermedades",
-  "G50":"Trastornos del trigémino","M79.7":"Fibromialgia",
-
-  // Cardiometabólico / renal
-  "E78":"Trastornos del metabolismo de lipoproteínas (dislipidemias)","E66":"Obesidad",
-  "I10":"Hipertensión esencial","I11":"Cardíaca hipertensiva","I12":"Renal hipertensiva","I13":"Cardiorrenal hipertensiva","I15":"Hipertensión secundaria",
-  "I20":"Angina de pecho","I21":"Infarto agudo de miocardio","I22":"IAM subsecuente","I25":"Cardiopatía isquémica crónica",
-  "I47":"Taquicardias paroxísticas","I48":"Fibrilación y aleteo auricular","I49":"Otras arritmias cardíacas",
+  "M05":"Artritis reumatoide seropositiva", "M06":"Otras artritis reumatoides",
+  "M15":"Poliartrosis", "M16":"Coxartrosis (artrosis de la cadera)", "M17":"Gonartrosis (artrosis de la rodilla)", "M18":"Artrosis de la primera articulación carpometacarpiana", "M19":"Otras artrosis",
+  "J45":"Asma", "J46":"Estado asmático",
+  "H25":"Catarata senil", "H26":"Otras cataratas", "H28":"Catarata y otros trastornos del cristalino en enfermedades clasificadas en otra parte", "Q12":"Malformaciones congénitas del cristalino",
+  "H54":"Ceguera y baja visión",
+  "Z55":"Problemas relacionados con la educación y la alfabetización", "Z56":"Problemas relacionados con el empleo y el desempleo", "Z57":"Exposición a factores de riesgo ocupacional", "Z58":"Problemas relacionados con el ambiente físico", "Z59":"Problemas relacionados con la vivienda y las circunstancias económicas", "Z60":"Problemas relacionados con el entorno social", "Z62":"Otros problemas relacionados con la crianza del niño", "Z63":"Otros problemas relacionados con el grupo de apoyo primario, incluyendo circunstancias familiares", "Z65":"Problemas relacionados con otras circunstancias psicosociales",
+  "E78":"Trastornos del metabolismo de las lipoproteínas y otras lipidemias",
+  "I10":"Hipertensión esencial (primaria)", "I11":"Enfermedad cardíaca hipertensiva", "I12":"Enfermedad renal hipertensiva", "I13":"Enfermedad cardiorrenal hipertensiva", "I15":"Hipertensión secundaria",
+  "G45":"Ataques isquémicos cerebrales transitorios y síndromes afines",
+  "B18":"Hepatitis viral crónica", "K70":"Enfermedad hepática alcohólica", "K71":"Enfermedad hepática tóxica", "K72":"Insuficiencia hepática, no clasificada en otra parte", "K73":"Hepatitis crónica, no clasificada en otra parte", "K74":"Fibrosis y cirrosis del hígado", "K76.6":"Hipertensión portal",
+  "J41":"Bronquitis crónica simple y mucopurulenta", "J42":"Bronquitis crónica no especificada", "J43":"Enfisema", "J44":"Otra enfermedad pulmonar obstructiva crónica",
+  "N15":"Otras enfermedades renales tubulointersticiales", "N19":"Insuficiencia renal no especificada",
+  "I48":"Fibrilación y aleteo auricular",
+  "I47":"Taquicardia paroxística", "I49":"Otras arritmias cardíacas",
   "I50":"Insuficiencia cardíaca",
-  "I64":"ACV, no especificado","I67":"Otros trastornos cerebrovasculares","I68":"Cerebrovasculares en otras enfermedades",
-  "N15":"Nefropatías túbulo-intersticiales","N18":"Enfermedad renal crónica","N19":"Insuficiencia renal, NE",
-  "N40":"Hiperplasia prostática benigna",
-
-  // Respiratorio
-  "J45":"Asma","J46":"Estado asmático","J41":"Bronquitis crónica simple/mucopurulenta","J42":"Bronquitis crónica, NE",
-  "J43":"Enfisema","J44":"EPOC",
-
-  // Oftalmo
-  "H25":"Catarata senil","H26":"Otras cataratas","H28":"Trastornos del cristalino en otras enfermedades","Q12":"Catarata congénita",
-  "H54":"Ceguera y baja visión","H40":"Glaucoma","H42":"Glaucoma en otras enfermedades",
-
-  // Flebo/Dermato – Úlceras
-  "I83.0":"Várices de miembros inferiores con úlcera",
-  "I83.1":"Várices de miembros inferiores con inflamación",
-  "I83.2":"Várices de miembros inferiores con úlcera e inflamación",
-  "I83.9":"Várices de miembros inferiores, NE",
-  "L97":"Úlcera de extremidad inferior, no clasificada en otra parte",
-  "L98.4":"Úlcera crónica de la piel, no clasificada en otra parte",
-
-  // Hepático / VIH / EII / TB
-  "B18":"Hepatitis viral crónica","K70":"Enfermedad hepática alcohólica","K71":"Enfermedad hepática tóxica",
-  "K72":"Insuficiencia hepática","K73":"Hepatitis crónica","K74":"Fibrosis y cirrosis","K76.6":"Hipertensión portal",
-  "B21":"VIH con neoplasias malignas","B22":"VIH con otras enfermedades especificadas","B23":"Otras afecciones por VIH","B24":"VIH, NE",
-  "K50":"Enfermedad de Crohn","K51":"Colitis ulcerosa","K52":"Otras colitis no infecciosas",
-  "A15":"Tuberculosis respiratoria, confirmada por baciloscopía o cultivo",
-  "A16":"Tuberculosis respiratoria, no confirmada",
-  "A17":"Tuberculosis del sistema nervioso",
-  "A18":"Tuberculosis de otros órganos",
-  "A19":"Tuberculosis miliar",
-
-  // Sociales y violencia
-  "Z55":"Problemas de educación","Z56":"Problemas de empleo","Z57":"Exposición ocupacional","Z58":"Exposición ambiental",
-  "Z59":"Problemas de vivienda/economía","Z60":"Problemas del entorno social","Z62":"Crianza","Z63":"Grupo de apoyo primario",
-  "Z65":"Otros problemas psicosociales",
-  "T74":"Maltrato (síndrome del maltrato)","Y07":"Autor/agresor del maltrato",
-
-  // Malignidad / Tumores (rangos descritos en la tabla)
-  "C00":"Neoplasias malignas (C00–C97)","D00":"Tumores in situ/benignos/inciertos (D00–D48)"
+  "E66":"Obesidad",
+  "N40":"Hiperplasia de la próstata",
+  "G40":"Epilepsia",
+  "G35":"Esclerosis múltiple",
+  "G20":"Enfermedad de Parkinson", "G21":"Parkinsonismo secundario", "G22":"Parkinsonismo en enfermedades clasificadas en otra parte", "G23":"Otras enfermedades degenerativas de los ganglios basales", "G24":"Distonía", "G25":"Otros trastornos extrapiramidales y del movimiento", "G26":"Trastornos extrapiramidales y del movimiento en enfermedades clasificadas en otra parte",
+  "G50":"Trastornos del nervio trigémino", "M79.7":"Fibromialgia",
+  "K50":"Enfermedad de Crohn (enteritis regional)", "K51":"Colitis ulcerosa", "K52":"Otras colitis y gastroenteritis no infecciosas",
+  "B21":"Enfermedad por VIH, resultante en tumores malignos", "B22":"Enfermedad por VIH, resultante en otras enfermedades especificadas", "B23":"Enfermedad por VIH, resultante en otras afecciones", "B24":"Enfermedad por VIH, no especificada",
+  "L93":"Lupus eritematoso", "M32":"Lupus eritematoso sistémico",
+  "C00-C97":"Neoplasias malignas", "D00-D48":"Neoplasias in situ, benignas y de comportamiento incierto",
+  "H90":"Hipoacusia conductiva y neurosensorial", "H91":"Otras hipoacusias",
+  "D68":"Otros defectos de la coagulación", "D69":"Púrpura y otras afecciones hemorrágicas", "D75":"Otras enfermedades de la sangre y de los órganos hematopoyéticos", "D77":"Otros trastornos de la sangre y de los órganos hematopoyéticos en enfermedades clasificadas en otra parte",
+  "F70":"Retraso mental leve", "F71":"Retraso mental moderado", "F72":"Retraso mental grave", "F73":"Retraso mental profundo", "F78":"Otro retraso mental", "F79":"Retraso mental no especificado",
+  "E01":"Trastornos tiroideos relacionados con deficiencia de yodo y afecciones relacionadas", "E02":"Hipotiroidismo subclínico por deficiencia de yodo", "E03":"Otros hipotiroidismos", "E05":"Tirotoxicosis (hipertiroidismo)",
+  "I83":"Várices de los miembros inferiores", "L97":"Úlcera de miembro inferior, no clasificada en otra parte", "L98.4":"Úlcera crónica de la piel, no clasificada en otra parte",
+  "H40":"Glaucoma", "H42":"Glaucoma en enfermedades clasificadas en otra parte",
+  "T74":"Síndromes del maltrato", "Y07":"Autor del maltrato y abandono",
+  "A15":"Tuberculosis respiratoria, confirmada bacteriológica e histológicamente", "A16":"Tuberculosis respiratoria, no confirmada bacteriológica o histológicamente", "A17":"Tuberculosis del sistema nervioso", "A18":"Tuberculosis de otros órganos", "A19":"Tuberculosis miliar"
 };
 
 /* ===== Estructura (52 condiciones exactas) ===== */
@@ -243,14 +217,10 @@ const GROUPS = [
       {id:'alcohol',     name:'Consumo perjudicial/dependiente de alcohol', codes:[...expMany([{base:'F10',subs:[0,1,2,3,4,5,6,7,8,9]}]),'Y91.2','Y91.3','Y91.9','Z71.4','Z72.1']},
       {id:'tabaquismo',  name:'Tabaquismo',                                 codes:[...expMany([{base:'F17',subs:[0,1,2,3,4,5,6,7,8,9]}]),'T65.2','Z71.6','Z72.0']},
       {id:'drogas',      name:'Consumo perjudicial o dependiente de drogas', codes:[
-        ...expMany([{base:'F11',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F12',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F13',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F14',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F15',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F16',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F18',subs:[0,1,2,3,4,5,6,7,8,9]}]),
-        ...expMany([{base:'F19',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F11',subs:[0,1,2,3,4,5,6,7,8,9]}]), ...expMany([{base:'F12',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F13',subs:[0,1,2,3,4,5,6,7,8,9]}]), ...expMany([{base:'F14',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F15',subs:[0,1,2,3,4,5,6,7,8,9]}]), ...expMany([{base:'F16',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F18',subs:[0,1,2,3,4,5,6,7,8,9]}]), ...expMany([{base:'F19',subs:[0,1,2,3,4,5,6,7,8,9]}]),
         'Z72.2'
       ]},
       {id:'anemia',      name:'Anemia crónica', codes:[
@@ -324,13 +294,12 @@ const GROUPS = [
 
 /* ===== Render ===== */
 function labelFor(code){
-  if(!code) return '';
-  if(typeof code!=='string') return '';
+  if(!code || typeof code !== 'string') return '';
   if(CIE[code]) return CIE[code];
-  // fallback progresivo: quita .x
-  const base = code.replace(/\.[0-9]$/,'');
+  // fallback progresivo: quita .x (p.ej. F33.2 -> F33)
+  const base = code.split('.')[0];
   if(CIE[base]) return CIE[base];
-  // fallback adicional: primeros 3–4 chars (p.ej., H40.1 → H40)
+  // fallback adicional: primeros 3 chars (p.ej., I83 -> I83)
   const short = code.slice(0,3);
   return CIE[short] || '(rótulo tabular no disponible)';
 }
@@ -478,6 +447,7 @@ function runConsoleTests(){
   tAssert('Total de condiciones = 52',()=> GROUPS.reduce((a,g)=>a+g.subgroups.reduce((b,sg)=>b+sg.items.length,0),0)===52 );
   // 2) Sin CIE-10 vacíos (todos resuelven a rótulo exacto o de familia)
   const missing = collectCodes().filter(c=> !hasLabel(c) && !/–/.test(c) );
+  if (missing.length > 0) { console.warn('Códigos sin rótulo:', missing); }
   tAssert('Sin CIE-10 vacíos',()=> missing.length===0 );
   // 3) Coberturas clave
   tAssert('Incluye Retraso mental F70–F79',()=> collectCodes().some(c=>/^F7[0-9]/.test(c)) );
