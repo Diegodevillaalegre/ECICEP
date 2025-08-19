@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Estratificador ECICEP – 52 condiciones</title>
+  <title>Estratificador de Pacientes ECICEP</title>
   <meta name="description" content="Sistema de estratificación ECICEP (Anexo oficial: 52 condiciones) – CESFAM Dr. Carlos Díaz Gidi 2025"/>
   <style>
     :root{
@@ -62,14 +62,14 @@
 <body>
 <div class="container">
   <header>
-    <h1>E stratificador de Pacientes ECICEP (52 condiciones)</h1>
+    <h1>Estratificador de Pacientes ECICEP</h1>
     <p>Basado en el Anexo oficial ECICEP. CESFAM Dr. Carlos Díaz Gidi — 2025.</p>
     <details class="card" open>
       <summary class="sub-summary">Cómo usarlo</summary>
       <div class="sub-content">
         <ol>
           <li>Abra los bloques de <strong>2 puntos</strong> y <strong>1 punto</strong> y marque las condiciones que correspondan.</li>
-          <li>Use el buscador para <strong>desplegar y resaltar</strong> patologías por nombre o código CIE‑10.</li>
+          <li>Use el buscador para <strong>desplegar y resaltar</strong> patologías por nombre o código CIE‑10 (opcional).</li>
           <li>En cada ítem puede ver el detalle de <strong>CIE‑10</strong> (código + diagnóstico) desplegando la sección.</li>
           <li>La tarjeta derecha muestra el <strong>puntaje total</strong> y el <strong>nivel G0–G3</strong> automáticamente.</li>
           <li>Use <strong>“Limpiar selección”</strong> para reiniciar todo.</li>
@@ -109,350 +109,164 @@
 
 <script>
 /* ==========================
-   Utilidades para códigos
+   Helpers
    ========================== */
-function expand(base, digits){
-  return (digits||[]).map(d => `${base}.${d}`);
-}
-function expandMany(specs){
-  // specs: ["H25", {base:"E10", subs:[0,1,2]}, ...]
-  const out=[];
-  (specs||[]).forEach(s=>{
-    if(typeof s==="string") out.push(s);
-    else if(s && typeof s==="object" && s.base && Array.isArray(s.subs)) out.push(...expand(s.base, s.subs));
-  });
-  return out;
+function expand(base, digits){ return (digits||[]).map(d=>`${base}.${d}`); }
+function expandMany(specs){ const out=[]; (specs||[]).forEach(s=>{ if(typeof s==="string") out.push(s); else if(s && s.base && Array.isArray(s.subs)) out.push(...expand(s.base,s.subs)); }); return out; }
+function normalize(s){
+  // Compatible ampliamente (sin Unicode property escapes)
+  return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
 
 /* ==========================
    Diccionario CIE-10 (resumen)
-   (Si falta una subcategoría, se muestra "(descripción no disponible)")
    ========================== */
 const CIE={
-  // Alcohol/tabaco/drogas
-  "F10":"Trastornos debidos al alcohol","Y91":"Efectos del alcohol según nivel de alcoholemia","Z71.4":"Consejería por alcohol","Z72.1":"Uso de alcohol",
-  "F17":"Trastornos debidos al consumo de tabaco","T65.2":"Efecto tóxico de nicotina","Z71.6":"Consejería por tabaquismo","Z72.0":"Uso de tabaco",
-  "F11":"Trastornos por opiáceos","F12":"Trastornos por cannabinoides","F13":"Trastornos por sedantes/hipnóticos","F14":"Trastornos por cocaína","F15":"Trastornos por estimulantes","F16":"Trastornos por alucinógenos","F18":"Trastornos por disolventes","F19":"Múltiples drogas y otras sustancias","Z72.2":"Uso de drogas",
-
-  // Anemias (familias)
-  "D50":"Anemia por deficiencia de hierro","D51":"Anemia por deficiencia de B12","D52":"Anemia por deficiencia de folato","D53":"Otras anemias nutricionales","D55":"Anemias debidas a enzimas","D56":"Talasemias","D57":"Anemia falciforme","D58":"Otras anemias hemolíticas hereditarias","D59":"Anemia hemolítica adquirida","D60":"Aplasia pura de serie roja","D61":"Otras anemias aplásicas","D62":"Anemia posthemorrágica aguda","D63":"Anemia en enfermedades crónicas","D64":"Otras anemias",
-
-  // Reumatología/artrosis/asma
+  "F10":"Trastornos debidos al alcohol","Y91":"Efectos del alcohol","Z71.4":"Consejería por alcohol","Z72.1":"Uso de alcohol",
+  "F17":"Trastornos por tabaco","T65.2":"Efecto tóxico de nicotina","Z71.6":"Consejería por tabaco","Z72.0":"Uso de tabaco",
+  "F11":"Trastornos por opiáceos","F12":"Trastornos por cannabinoides","F13":"Trastornos por sedantes/hipnóticos","F14":"Trastornos por cocaína","F15":"Trastornos por estimulantes","F16":"Trastornos por alucinógenos","F18":"Trastornos por disolventes","F19":"Múltiples drogas","Z72.2":"Uso de drogas",
+  "D50":"Anemia por deficiencia de hierro","D51":"Anemia por deficiencia de B12","D52":"Anemia por deficiencia de folato","D53":"Otras anemias nutricionales","D55":"Anemias por enzimas","D56":"Talasemias","D57":"Anemia falciforme","D58":"Otras anemias hemolíticas hereditarias","D59":"Anemia hemolítica adquirida","D60":"Aplasia pura de serie roja","D61":"Otras anemias aplásicas","D62":"Anemia posthemorrágica aguda","D63":"Anemia en enfermedades crónicas","D64":"Otras anemias",
   "M05":"AR seropositiva","M06":"Otras artritis reumatoides","M15":"Poliartrosis","M16":"Coxartrosis","M17":"Gonartrosis","M18":"Rizartrosis","M19":"Otras artrosis",
   "J45":"Asma","J46":"Estado asmático",
-
-  // Oftalmo
   "H25":"Catarata senil","H26":"Otras cataratas","H28":"Alteraciones del cristalino en otras enfermedades","Q12":"Catarata congénita",
-  "H54":"Ceguera y disminución de agudeza visual",
-  "H40":"Glaucoma","H42":"Glaucoma en enfermedades clasificadas en otra parte",
-
-  // Demencia/psicosis y depresión
-  "F00":"Demencia en enfermedad de Alzheimer","F01":"Demencia vascular","F02":"Demencia en otras enfermedades","F03":"Demencia no especificada",
-  "F33.0":"Depresión recurrente actual leve","F33.1":"Depresión recurrente actual moderado","F33.2":"Depresión recurrente actual grave sin psicosis","F33.3":"Depresión recurrente actual grave con psicosis","F33.4":"Remisión","F33.8":"Otros","F33.9":"NE",
-  "F20":"Esquizofrenia","F21":"Trastorno esquizotípico","F22":"Trastornos delirantes persistentes","F23":"Trastornos psicóticos agudos y transitorios",
-
-  // Diabetes
-  "E10":"Diabetes mellitus tipo 1","E11":"Diabetes mellitus tipo 2","E12":"Diabetes por desnutrición","E13":"Otras DM especificadas","E14":"DM no especificada",
-
-  // Psicosocial
-  "Z55":"Problemas relacionados con la educación y alfabetización","Z56":"Problemas relacionados con el empleo","Z57":"Exposición ocupacional a factores de riesgo","Z58":"Exposición ambiental a factores de riesgo","Z59":"Problemas relacionados con la vivienda y la economía","Z60":"Problemas relacionados con el entorno social","Z62":"Problemas relacionados con la crianza","Z63":"Otros problemas relacionados con el grupo primario de apoyo","Z65":"Otros problemas psicosociales",
-
-  // Dislipidemia y obesidad
-  "E78":"Trastornos del metabolismo de las lipoproteínas","E66":"Obesidad",
-
-  // ECV / TIA
-  "G46":"Síndromes vasculares encefálicos","I64":"ACV agudo no especificado","I67":"Otros trastornos cerebrovasculares","I68":"Trastornos cerebrovasculares en otras enfermedades",
-  "G45":"Ataques isquémicos transitorios",
-
-  // Hepático
-  "B18":"Hepatitis viral crónica","K70":"Enfermedad hepática alcohólica","K71":"Enfermedad tóxica del hígado","K72":"Insuficiencia hepática crónica","K73":"Hepatitis crónica","K74":"Fibrosis y cirrosis hepáticas","K76.6":"Hipertensión portal",
-
-  // EPOC
+  "H54":"Ceguera y baja visión",
+  "H40":"Glaucoma","H42":"Glaucoma en otras enfermedades",
+  "F00":"Demencia en Alzheimer","F01":"Demencia vascular","F02":"Demencia en otras enfermedades","F03":"Demencia NE",
+  "F33.0":"Depresión recidivante leve","F33.1":"Depresión recidivante moderada","F33.2":"Depresión recidivante grave sin psicosis","F33.3":"Depresión recidivante grave con psicosis","F33.4":"Remisión","F33.8":"Otros","F33.9":"NE",
+  "F20":"Esquizofrenia","F21":"Esquizotípico","F22":"Delirantes persistentes","F23":"Psicosis aguda y transitoria",
+  "E10":"Diabetes tipo 1","E11":"Diabetes tipo 2","E12":"Diabetes por desnutrición","E13":"Otras DM","E14":"DM NE",
+  "Z55":"Problemas de educación","Z56":"Problemas de empleo","Z57":"Exposición ocupacional","Z58":"Exposición ambiental","Z59":"Problemas de vivienda/economía","Z60":"Problemas del entorno social","Z62":"Crianza","Z63":"Apoyo familiar","Z65":"Otros problemas psicosociales",
+  "E78":"Dislipidemias","E66":"Obesidad",
+  "G46":"Síndromes vasculares encefálicos","I64":"ACV NE","I67":"Otros trastornos cerebrovasculares","I68":"Cerebrovasculares en otras enfermedades","G45":"TIA",
+  "B18":"Hepatitis viral crónica","K70":"Hígado alcohólico","K71":"Hígado tóxico","K72.1":"Insuficiencia hepática crónica","K73":"Hepatitis crónica","K74":"Fibrosis/Cirrosis","K76.6":"Hipertensión portal",
   "J41":"Bronquitis crónica simple/mucopurulenta","J42":"Bronquitis crónica NE","J43":"Enfisema","J44":"EPOC",
-
-  // ERC
-  "N15":"Enfermedad túbulointersticial y otras nefropatías","N18":"Enfermedad renal crónica","N19":"Insuficiencia renal NE",
-
-  // Cardiopatía isquémica
-  "I20":"Angina de pecho","I21":"IAM agudo","I22":"IAM subsecuente","I25":"Cardiopatía isquémica crónica","I51":"Otros trastornos del corazón","I52":"Otros trastornos cardiacos en otras enfermedades",
-
-  // Gastro inflamatorio
-  "K50":"Enfermedad de Crohn","K51":"Colitis ulcerosa","K52":"Otras colitis no infecciosas",
-
-  // Neuro
-  "G40":"Epilepsia","G35":"Esclerosis múltiple","G20":"Enfermedad de Parkinson","G21":"Parkinsonismo secundario","G22":"Parkinsonismo en otras enfermedades","G23":"Otras enfermedades degenerativas de ganglios basales","G24":"Trastornos distónicos","G25":"Otros trastornos extrapiramidales y del movimiento","G26":"Trastornos extrapiramidales en otras enfermedades",
-  "G50":"Trastornos del trigémino",
-
-  // Arritmias y FA
-  "I47":"Taquicardia paroxística","I49":"Otras arritmias cardiacas","I48":"Fibrilación y aleteo auricular",
-  "I50":"Insuficiencia cardiaca",
-
-  // Metabólico
+  "N15":"Nefropatías túbulo‑intersticiales","N18":"Enfermedad renal crónica","N19":"Insuficiencia renal NE",
+  "I20":"Angina","I21":"IAM","I22":"IAM subsecuente","I25":"Cardiopatía isquémica crónica","I51":"Otros trastornos del corazón","I52":"Trastornos cardiacos en otras enfermedades",
+  "K50":"Crohn","K51":"Colitis ulcerosa","K52":"Otras colitis no infecciosas",
+  "G40":"Epilepsia","G35":"Esclerosis múltiple","G20":"Parkinson","G21":"Parkinsonismo secundario","G22":"Parkinsonismo en otras enfermedades","G23":"Otras enf. ganglios basales","G24":"Distonías","G25":"Otros extrapiramidales","G26":"Extrapiramidales en otras enfermedades","G50":"Trastornos del trigémino",
+  "I47":"Taquicardia paroxística","I49":"Otras arritmias","I48":"Fibrilación/Flutter","I50":"Insuficiencia cardiaca",
   "M10":"Gota/Hiperuricemia","N40":"Hiperplasia prostática benigna",
-  
-  // Tiroides
   "E01":"Trastornos tiroideos por deficiencia de yodo","E02":"Hipotiroidismo subclínico por deficiencia de yodo","E03":"Otros hipotiroidismos","E05":"Tirotoxicosis",
-
-  // VIH y TB
-  "B21":"Enfermedad por VIH con neoplasias","B22":"Enfermedad por VIH con otras enfermedades especificadas","B23":"Otras afecciones por VIH","B24":"Enfermedad por VIH NE",
-  "A15":"Tuberculosis respiratoria","A17":"TB del sistema nervioso","A18":"TB de otros órganos","A19":"TB miliar",
-
-  // Lupus / neoplasias / VIF / hipoacusia / coagulación / úlcera
-  "L93":"Lupus cutáneo","M32":"Lupus eritematoso sistémico",
-  "C00":"Neoplasia maligna (letra C – ver detalle)","D00":"Tumores in situ / benignos y de comportamiento incierto (D00–D48)",
-  "T74":"Síndromes de maltrato","Y07":"Autor de agresión/problemas relacionados",
-  "H90":"Hipoacusia conductiva y neurosensorial","H91":"Otros trastornos de la audición",
-  "D68":"Trastornos de la coagulación","D69":"Púrpuras y otras afecciones hemorrágicas","D75":"Otras enfermedades de la sangre","D77":"Otros trastornos de sangre en otras enfermedades",
+  "B21":"VIH con neoplasias","B22":"VIH con otras enfermedades esp.","B23":"Otras afecciones por VIH","B24":"VIH NE",
+  "A15":"TB respiratoria","A17":"TB del sistema nervioso","A18":"TB de otros órganos","A19":"TB miliar",
+  "L93":"Lupus cutáneo","M32":"Lupus sistémico",
+  "C00":"Neoplasias malignas (C00–C97)","D00":"Tumores in situ/benignos/inciertos (D00–D48)",
+  "T74":"Maltrato","Y07":"Agresor",
+  "H90":"Hipoacusia","H91":"Otros trastornos de audición",
+  "D68":"Trastornos de la coagulación","D69":"Púrpuras y otras afecciones hemorrágicas","D75":"Otras enfermedades de la sangre","D77":"Otros trastornos de la sangre en otras enfermedades",
   "L97":"Úlcera de extremidad inferior","L98.4":"Úlcera crónica de la piel NE",
-
-  // Ansiedad / personalidad / sueño / otros SM
-  "F40":"Trastornos de ansiedad fóbica","F41":"Otros trastornos de ansiedad","F42":"Trastorno obsesivo compulsivo",
-  "F60":"Trastornos específicos de la personalidad","F61":"Trastornos mixtos de la personalidad","F62":"Cambios perdurables de la personalidad","F68":"Otros trastornos de la personalidad","F69":"Trastorno de la personalidad NE",
+  "F40":"Ansiedad fóbica","F41":"Otros trastornos de ansiedad","F42":"TOC",
+  "F60":"Trastornos específicos de la personalidad","F61":"Trastornos mixtos","F62":"Cambios perdurables de la personalidad","F68":"Otros trastornos de la personalidad","F69":"Personalidad NE",
   "F51":"Trastornos del sueño no orgánicos","G47":"Trastornos del sueño orgánicos",
   "F31":"Trastorno afectivo bipolar","F34":"Trastornos del humor persistentes","F63":"Trastornos de los hábitos e impulsos","F66":"Trastornos del desarrollo/identidad sexual"
 };
 
 /* ==========================
-   Estructura de datos (52 condiciones exactas)
+   Estructura – 52 condiciones
    ========================== */
 const GROUPS=[
-  // 2 PUNTOS
   {points:2,title:'Condiciones que suman 2 puntos',subgroups:[
     {name:'Neuro-psiquiatría',items:[
-      {id:'demencia', name:'Demencia', codes:expandMany(['F00','F01','F02','F03'])},
-      {id:'dep_grave', name:'Depresión Grave (recurrente, con/sin psicosis)', codes:expandMany([{base:'F33',subs:[2,3]}])},
-      {id:'esquizo', name:'Esquizofrenia y psicosis (espectro)', codes:expandMany(['F20','F21',{base:'F22',subs:[0,8,9]},{base:'F23',subs:[0,1,2,3,8,9]}])}
+      {id:'demencia',name:'Demencia',codes:['F00','F01','F02','F03']},
+      {id:'dep_grave',name:'Depresión Grave (recurrente, con/sin psicosis)',codes:['F33.2','F33.3']},
+      {id:'esquizo',name:'Espectro esquizofrenia y psicosis',codes:['F20','F21','F22','F23']}
     ]},
     {name:'Cardiovascular y renal',items:[
-      {id:'ecv', name:'Enfermedad cerebrovascular / ACV / AVE', codes:expandMany(['G46','I64','I67','I68'])},
-      {id:'dm', name:'Diabetes mellitus (E10–E14, todas las subcategorías)', codes:[...expandMany([{base:'E10',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E11',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E12',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E13',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E14',subs:[0,1,2,3,4,5,6,7,8,9]}])]},
-      {id:'erc_av', name:'Enfermedad renal crónica avanzada (IV–V/terminal)', codes:expandMany([{base:'N18',subs:[4,5,6]}])},
-      {id:'isci', name:'Enfermedades cardiovasculares / IAM / cardiopatía isquémica', codes:expandMany(['I20','I21','I22','I25',{base:'I51',subs:[0,4,5,6,7,8,9]},{base:'I52',subs:[0,1,8]}])}
+      {id:'ecv',name:'Enfermedad cerebrovascular / ACV / AVE',codes:['G46','I64','I67','I68']},
+      {id:'dm',name:'Diabetes mellitus (E10–E14)',codes:[...expandMany([{base:'E10',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E11',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E12',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E13',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expandMany([{base:'E14',subs:[0,1,2,3,4,5,6,7,8,9]}])]},
+      {id:'erc_av',name:'ERC avanzada (IV–V/terminal)',codes:['N18.4','N18.5','N18.6']},
+      {id:'isci',name:'IAM / Angina / Cardiopatía isquémica',codes:['I20','I21','I22','I25','I51','I52']}
     ]},
     {name:'Funcionalidad',items:[
-      {id:'dependencia', name:'Función limitada / discapacidad / dependencia', codes:expandMany([{base:'R26',subs:[0,1,2,8]},{base:'Z74',subs:[0,1,2,3,8,9]},{base:'Z99',subs:[0,1,2,3,8,9]}])}
+      {id:'dependencia',name:'Función limitada / discapacidad / dependencia',codes:['R26','Z74','Z99']}
     ]}
   ]},
-
-  // 1 PUNTO
   {points:1,title:'Condiciones que suman 1 punto',subgroups:[
     {name:'Salud mental y conductual',items:[
-      {id:'alcohol', name:'Consumo perjudicial/dependiente de alcohol', codes:expandMany(['F10','Y91',{base:'Z71',subs:[4]},{base:'Z72',subs:[1]}])},
-      {id:'tabaquismo', name:'Tabaquismo', codes:expandMany(['F17','T65.2',{base:'Z71',subs:[6]},{base:'Z72',subs:[0]}])},
-      {id:'drogas', name:'Consumo perjudicial o dependiente de drogas', codes:expandMany(['F11','F12','F13','F14','F15','F16','F18','F19',{base:'Z72',subs:[2]}])},
-      {id:'dep_leve', name:'Depresión leve o moderada (recurrente)', codes:expandMany([{base:'F33',subs:[0,1,4,8,9]}])},
-      {id:'ansiedad', name:'Trastorno ansioso / TOC', codes:expandMany(['F40','F41','F42'])},
-      {id:'personalidad', name:'Trastorno de la personalidad', codes:expandMany(['F60','F61','F62','F68','F69'])},
-      {id:'sueno', name:'Trastornos del sueño', codes:[...expandMany(['F51']),...expandMany([{base:'G47',subs:[3,4,8,9]}])]},
-      {id:'otros_sm', name:'Otros trastornos de salud mental', codes:expandMany(['F31','F34','F63','F66'])},
-      {id:'psicosocial', name:'Dificultades socioeconómicas o psicosociales', codes:expandMany(['Z55','Z56','Z57','Z58','Z59','Z60','Z62','Z63','Z65'])},
-      {id:'vif', name:'Maltrato físico/psicológico/VIF/abuso sexual/ideación e intento suicida', codes:expandMany(['T74','Y07'])}
+      {id:'alcohol',name:'Consumo perjudicial/dependiente de alcohol',codes:['F10','Y91','Z71.4','Z72.1']},
+      {id:'tabaquismo',name:'Tabaquismo',codes:['F17','T65.2','Z71.6','Z72.0']},
+      {id:'drogas',name:'Consumo perjudicial o dependiente de drogas',codes:['F11','F12','F13','F14','F15','F16','F18','F19','Z72.2']},
+      {id:'dep_leve',name:'Depresión leve o moderada (recurrente)',codes:['F33.0','F33.1','F33.4','F33.8','F33.9']},
+      {id:'ansiedad',name:'Trastorno ansioso / TOC',codes:['F40','F41','F42']},
+      {id:'personalidad',name:'Trastorno de la personalidad',codes:['F60','F61','F62','F68','F69']},
+      {id:'sueno',name:'Trastornos del sueño',codes:['F51','G47']},
+      {id:'otros_sm',name:'Otros trastornos de salud mental',codes:['F31','F34','F63','F66']},
+      {id:'psicosocial',name:'Dificultades socioeconómicas o psicosociales',codes:['Z55','Z56','Z57','Z58','Z59','Z60','Z62','Z63','Z65']},
+      {id:'vif',name:'Maltrato/VIF/abuso sexual/ideación o intento suicida',codes:['T74','Y07']}
     ]},
-
     {name:'Cardiometabólico y renal',items:[
-      {id:'dislipidemia', name:'Dislipidemias', codes:expandMany(['E78'])},
-      {id:'hta', name:'Hipertensión', codes:[...expandMany(['I10']),...expandMany([{base:'I11',subs:[0,9]}]),...expandMany([{base:'I12',subs:[0,9]}]),...expandMany([{base:'I13',subs:[0,1,9]}]),'I23.2']},
-      {id:'fa', name:'Fibrilación auricular / flutter', codes:expandMany(['I48'])},
-      {id:'arritmias', name:'Arritmia cardíaca / taquicardia paroxística', codes:expandMany(['I47','I49'])},
-      {id:'insuf_card', name:'Insuficiencia cardiaca', codes:expandMany(['I50'])},
-      {id:'erc_i_iii', name:'Enfermedad renal crónica (I–III / NE)', codes:[...expandMany(['N15']),...expandMany([{base:'N18',subs:[1,2,3,9]}]),'N19']}
+      {id:'dislipidemia',name:'Dislipidemias',codes:['E78']},
+      {id:'hta',name:'Hipertensión',codes:['I10','I11','I12','I13','I15']},
+      {id:'fa',name:'Fibrilación auricular / flutter',codes:['I48']},
+      {id:'arritmias',name:'Arritmia cardíaca / taquicardia paroxística',codes:['I47','I49']},
+      {id:'insuf_card',name:'Insuficiencia cardiaca',codes:['I50']},
+      {id:'erc_i_iii',name:'ERC (I–III / NE)',codes:['N15','N18.1','N18.2','N18.3','N18.9','N19']},
+      {id:'obesidad',name:'Obesidad',codes:['E66']},
+      {id:'hbp',name:'Hiperplasia prostática benigna',codes:['N40']},
+      {id:'gota',name:'Hiperuricemia / Gota',codes:['M10']}
     ]},
-
     {name:'Respiratorio',items:[
-      {id:'asma', name:'Asma', codes:[...expandMany([{base:'J45',subs:[0,1,8,9]}]),'J46']},
-      {id:'epoc', name:'EPOC', codes:[...expandMany(['J41','J42','J43']),...expandMany([{base:'J44',subs:[0,1,8,9]}])]},
-      {id:'tuberculosis', name:'Tuberculosis', codes:[...expandMany(['A15','A17','A18','A19'])]}
+      {id:'asma',name:'Asma',codes:['J45','J46']},
+      {id:'epoc',name:'EPOC',codes:['J41','J42','J43','J44']},
+      {id:'tuberculosis',name:'Tuberculosis',codes:['A15','A17','A18','A19']}
     ]},
-
     {name:'Neurológico',items:[
-      {id:'epilepsia', name:'Epilepsia', codes:expandMany(['G40'])},
-      {id:'em', name:'Esclerosis múltiple', codes:expandMany(['G35'])},
-      {id:'parkinson', name:'Parkinsonismo (y extrapiramidales relacionados)', codes:expandMany(['G20','G21','G22','G23','G24','G25','G26'])},
-      {id:'dolor_neuro', name:'Dolor neuropático / fibromialgia', codes:[...expandMany(['G50']),'M79.7']}
+      {id:'epilepsia',name:'Epilepsia',codes:['G40']},
+      {id:'em',name:'Esclerosis múltiple',codes:['G35']},
+      {id:'parkinson',name:'Parkinsonismo y extrapiramidales',codes:['G20','G21','G22','G23','G24','G25','G26']},
+      {id:'dolor_neuro',name:'Dolor neuropático / fibromialgia',codes:['G50','M79.7']}
     ]},
-
     {name:'Músculo-esquelético y reuma',items:[
-      {id:'ar', name:'Artritis reumatoide', codes:expandMany(['M05','M06'])},
-      {id:'artrosis', name:'Artrosis (rodilla, cadera u otras)', codes:expandMany(['M15','M16','M17','M18','M19'])}
+      {id:'ar',name:'Artritis reumatoide',codes:['M05','M06']},
+      {id:'artrosis',name:'Artrosis (rodilla, cadera u otras)',codes:['M15','M16','M17','M18','M19']}
     ]},
-
     {name:'Sistémicas, infecciosas y varias',items:[
-      {id:'anemia', name:'Anemia crónica', codes:expandMany(['D50','D51','D52','D53','D55','D56','D57','D58','D59','D60','D61','D62','D63','D64'])},
-      {id:'hepatico', name:'Enfermedad hepática crónica', codes:[...expandMany(['B18','K70','K71']),...expandMany([{base:'K72',subs:[1]}]),...expandMany(['K73','K74']),'K76.6']},
-      {id:'eii', name:'Enteritis crónica / Colitis ulcerosa / Crohn', codes:expandMany(['K50','K51','K52'])},
-      {id:'vih', name:'Infección por VIH / SIDA', codes:expandMany(['B21','B22','B23','B24'])},
-      {id:'lupus', name:'Lupus', codes:expandMany(['L93','M32'])},
-      {id:'cancer', name:'Malignidad / Neoplasia / Cáncer (toda la letra C y D00–D48)', codes:[
-        // C00–C97 (enumeración abreviada representativa)
-        'C00','C01','C02','C03','C04','C05','C06','C07','C08','C09','C10','C11','C12','C13','C14','C15','C16','C17','C18','C19','C20','C21','C22','C23','C24','C25','C26','C30','C31','C32','C33','C34','C37','C38','C39','C40','C41','C43','C44','C45','C46','C47','C48','C49','C50','C51','C52','C53','C54','C55','C56','C57','C58','C60','C61','C62','C63','C64','C65','C66','C67','C68','C69','C70','C71','C72','C73','C74','C75','C76','C77','C78','C79','C80','C81','C82','C83','C84','C85','C86','C88','C90','C91','C92','C93','C94','C95','C96','C97',
-        // D00–D48 (inicio a D48 representativo)
-        'D00','D01','D02','D03','D04','D05','D06','D07','D08','D09','D10','D11','D12','D13','D14','D15','D16','D17','D18','D19','D20','D21','D22','D23','D24','D25','D26','D27','D28','D29','D30','D31','D32','D33','D34','D35','D36','D37','D38','D39','D40','D41','D42','D43','D44','D45','D46','D47','D48']
-      ]},
-      {id:'obesidad', name:'Obesidad', codes:expandMany(['E66'])},
-      {id:'hipoacusia', name:'Presbiacusia / Hipoacusia / Sordera', codes:expandMany(['H90','H91'])},
-      {id:'coagulacion', name:'Trastornos de la coagulación', codes:[...expandMany(['D68','D69']),...expandMany([{base:'D75',subs:[0,8,9]}]),'D77']},
-      {id:'retraso_mental', name:'Retraso mental (discapacidad intelectual)', codes:[...expandMany([{base:'F70',subs:[0,1,8,9]}]),...expandMany([{base:'F71',subs:[0,1,8,9]}]),...expandMany([{base:'F72',subs:[0,1,8,9]}]),...expandMany([{base:'F73',subs:[0,1,8,9]}]),...expandMany([{base:'F78',subs:[0,1,8,9]}]),...expandMany([{base:'F79',subs:[0,1,8,9]}])]},
-      {id:'hbp', name:'Hiperplasia prostática benigna', codes:expandMany(['N40'])},
-      {id:'gota', name:'Hiperuricemia / Gota', codes:expandMany(['M10'])},
-      {id:'tiroides', name:'Trastornos tiroideos', codes:[...expandMany(['E01']), 'E02', ...expandMany(['E03']), ...expandMany(['E05'])]},
-      {id:'ulcera', name:'Úlcera crónica de la piel', codes:['I83','L97','L98.4']},
-      {id:'catarata_retino', name:'Catarata / Retinopatía', codes:expandMany(['H25','H26','H28','Q12'])},
-      {id:'ceguera', name:'Ceguera', codes:expandMany(['H54'])},
-      {id:'glaucoma', name:'Glaucoma', codes:expandMany(['H40','H42'])}
+      {id:'anemia',name:'Anemia crónica',codes:['D50','D51','D52','D53','D55','D56','D57','D58','D59','D60','D61','D62','D63','D64']},
+      {id:'hepatico',name:'Enfermedad hepática crónica',codes:['B18','K70','K71','K72.1','K73','K74','K76.6']},
+      {id:'eii',name:'Enteritis crónica / CU / Crohn',codes:['K50','K51','K52']},
+      {id:'vih',name:'Infección por VIH / SIDA',codes:['B21','B22','B23','B24']},
+      {id:'lupus',name:'Lupus',codes:['L93','M32']},
+      {id:'cancer',name:'Malignidad / Neoplasia / Cáncer (C00–C97 y D00–D48)',codes:['C00','D00']},
+      {id:'hipoacusia',name:'Presbiacusia / Hipoacusia / Sordera',codes:['H90','H91']},
+      {id:'coagulacion',name:'Trastornos de la coagulación',codes:['D68','D69','D75','D77']},
+      {id:'retraso_mental',name:'Retraso mental (discapacidad intelectual)',codes:['F70','F71','F72','F73','F78','F79']},
+      {id:'tiroides',name:'Trastornos tiroideos',codes:['E01','E02','E03','E05']},
+      {id:'ulcera',name:'Úlcera crónica de la piel',codes:['I83','L97','L98.4']},
+      {id:'catarata_retino',name:'Catarata / Retinopatía',codes:['H25','H26','H28','Q12']},
+      {id:'ceguera',name:'Ceguera',codes:['H54']},
+      {id:'glaucoma',name:'Glaucoma',codes:['H40','H42']}
     ]}
   ]}
 ];
 
 /* ==========================
-   Render de UI
+   Render UI
    ========================== */
-const $=s=>document.querySelector(s);
-const $$=s=>Array.from(document.querySelectorAll(s));
-
-function el(tag, props={}, children=[]){
-  const n=document.createElement(tag);
-  Object.entries(props).forEach(([k,v])=>{
-    if(k==='class') n.className=v;
-    else if(k==='text') n.textContent=v;
-    else if(k==='html') n.innerHTML=v;
-    else n[k]=v;
-  });
-  children.forEach(c=>n.appendChild(c));
-  return n;
-}
-
-function buildCieTable(codes){
-  const wrap=el('div');
-  const table=el('table',{class:'cie-table'});
-  const thead=el('thead');
-  thead.appendChild(el('tr',{},[el('th',{text:'Código'}),el('th',{text:'Diagnóstico'})]));
-  table.appendChild(thead);
-  const tbody=el('tbody');
-  (codes||[]).forEach(code=>{
-    const label=CIE[code] || CIE[code.replace(/\.[0-9]$/,'')] || '(descripción no disponible)';
-    const tr=el('tr');
-    tr.appendChild(el('td',{text:code}));
-    tr.appendChild(el('td',{text:label}));
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  wrap.appendChild(el('div',{class:'cie-help',text:'Listado según CIE‑10 2017 (MINSAL).'}));
-  return wrap;
-}
-
-function buildUI(){
-  const root=$('#list'); root.innerHTML='';
-  GROUPS.forEach(g=>{
-    const det=el('details');
-    const sum=el('summary',{html:`${g.title} <span class="small">(+${g.points} pts c/u)</span>`});
-    det.appendChild(sum);
-    const wrap=el('div',{class:'level-wrap'});
-
-    g.subgroups.forEach(sg=>{
-      const sd=el('details',{class:'sub-details'});
-      const ss=el('summary',{class:'sub-summary',text:sg.name});
-      sd.appendChild(ss);
-      const sc=el('div',{class:'sub-content'});
-
-      sg.items.forEach(it=>{
-        const row=el('div',{class:'row'});
-        const cb=el('input',{type:'checkbox',id:it.id});
-        cb.dataset.score=g.points;
-        cb.addEventListener('change',calcScore);
-        const lab=el('label',{htmlFor:it.id,text:it.name});
-        row.appendChild(cb); row.appendChild(lab); row.appendChild(el('span',{class:'badge',text:`+${g.points}`}));
-
-        const cieDet=el('details',{class:'cie'});
-        const cieSum=el('summary',{text:'CIE‑10'});
-        const inner=el('div',{class:'inner'});
-        inner.appendChild(buildCieTable(it.codes||[]));
-        cieDet.appendChild(cieSum); cieDet.appendChild(inner);
-
-        // referencias para búsqueda
-        row.dataset.itemId=it.id;
-        row.dataset.name=it.name.toLowerCase();
-        row.dataset.codes=(it.codes||[]).join('|').toLowerCase();
-
-        sc.appendChild(row); sc.appendChild(cieDet);
-      });
-
-      sd.appendChild(sc);
-      wrap.appendChild(sd);
-    });
-
-    det.appendChild(wrap);
-    root.appendChild(det);
-  });
-
-  runConsoleTests();
-}
+const $=s=>document.querySelector(s); const $$=s=>Array.from(document.querySelectorAll(s));
+function el(tag,props={},children=[]){ const n=document.createElement(tag); Object.entries(props).forEach(([k,v])=>{ if(k==='class') n.className=v; else if(k==='text') n.textContent=v; else if(k==='html') n.innerHTML=v; else n[k]=v; }); children.forEach(c=>n.appendChild(c)); return n; }
+function buildCieTable(codes){ const wrap=el('div'); const table=el('table',{class:'cie-table'}); const thead=el('thead'); thead.appendChild(el('tr',{},[el('th',{text:'Código'}),el('th',{text:'Diagnóstico'})])); table.appendChild(thead); const tbody=el('tbody'); (codes||[]).forEach(code=>{ const label=CIE[code] || CIE[code.replace(/\.[0-9]$/,'')] || '(descripción no disponible)'; const tr=el('tr'); tr.appendChild(el('td',{text:code})); tr.appendChild(el('td',{text:label})); tbody.appendChild(tr); }); table.appendChild(tbody); wrap.appendChild(table); wrap.appendChild(el('div',{class:'cie-help',text:'Listado según CIE‑10 2017 (MINSAL).'})); return wrap; }
+function buildUI(){ const root=$('#list'); root.innerHTML=''; GROUPS.forEach(g=>{ const det=el('details'); const sum=el('summary',{html:`${g.title} <span class="small">(+${g.points} pts c/u)</span>`}); det.appendChild(sum); const wrap=el('div',{class:'level-wrap'}); g.subgroups.forEach(sg=>{ const sd=el('details',{class:'sub-details'}); const ss=el('summary',{class:'sub-summary',text:sg.name}); sd.appendChild(ss); const sc=el('div',{class:'sub-content'}); sg.items.forEach(it=>{ const row=el('div',{class:'row'}); const cb=el('input',{type:'checkbox',id:it.id}); cb.dataset.score=g.points; cb.addEventListener('change',calcScore); const lab=el('label',{htmlFor:it.id,text:it.name}); row.appendChild(cb); row.appendChild(lab); row.appendChild(el('span',{class:'badge',text:`+${g.points}`})); const cieDet=el('details',{class:'cie'}); const cieSum=el('summary',{text:'CIE‑10'}); const inner=el('div',{class:'inner'}); inner.appendChild(buildCieTable(it.codes||[])); cieDet.appendChild(cieSum); cieDet.appendChild(inner); row.dataset.itemId=it.id; row.dataset.name=it.name.toLowerCase(); row.dataset.codes=(it.codes||[]).join('|').toLowerCase(); sc.appendChild(row); sc.appendChild(cieDet); }); sd.appendChild(sc); wrap.appendChild(sd); }); det.appendChild(wrap); root.appendChild(det); }); runConsoleTests(); }
 
 /* ==========================
    Puntaje y nivel G
    ========================== */
-function calcScore(){
-  let total=0;
-  $$('#list input[type=checkbox]').forEach(cb=>{ if(cb.checked) total+=parseInt(cb.dataset.score,10); });
-  const score=$('#score'), gl=$('#glevel'), gd=$('#gdesc');
-  score.textContent=total;
-  let lvl='G0', cls='g0', desc='<strong>Bajo Riesgo:</strong> Sin patologías con puntaje.';
-  if(total>=5){ lvl='G3'; cls='g3'; desc='<strong>Alto Riesgo:</strong> Manejo multidisciplinario y coordinación estrecha.'; }
-  else if(total>=2){ lvl='G2'; cls='g2'; desc='<strong>Riesgo Moderado:</strong> APS integral y eventual coordinación con especialidades.'; }
-  else if(total===1){ lvl='G1'; cls='g1'; desc='<strong>Riesgo Bajo a Moderado:</strong> Una condición con puntaje; control según patología.'; }
-  gl.textContent=lvl; gd.innerHTML=desc;
-  ['g0','g1','g2','g3'].forEach(c=>{gl.classList.remove(c);gd.classList.remove(c);});
-  gl.classList.add(cls); gd.classList.add(cls);
-}
-function resetForm(){
-  $$('#list input[type=checkbox]').forEach(cb=>cb.checked=false);
-  calcScore();
-  clearSearch();
-}
+function calcScore(){ let total=0; $$('#list input[type=checkbox]').forEach(cb=>{ if(cb.checked) total+=parseInt(cb.dataset.score,10); }); const score=$('#score'), gl=$('#glevel'), gd=$('#gdesc'); score.textContent=total; let lvl='G0', cls='g0', desc='<strong>Bajo Riesgo:</strong> Sin patologías con puntaje.'; if(total>=5){ lvl='G3'; cls='g3'; desc='<strong>Alto Riesgo:</strong> Manejo multidisciplinario y coordinación estrecha.'; } else if(total>=2){ lvl='G2'; cls='g2'; desc='<strong>Riesgo Moderado:</strong> APS integral y eventual coordinación con especialidades.'; } else if(total===1){ lvl='G1'; cls='g1'; desc='<strong>Riesgo Bajo a Moderado:</strong> Una condición con puntaje; control según patología.'; } gl.textContent=lvl; gd.innerHTML=desc; ['g0','g1','g2','g3'].forEach(c=>{gl.classList.remove(c);gd.classList.remove(c);}); gl.classList.add(cls); gd.classList.add(cls); }
+function resetForm(){ $$('#list input[type=checkbox]').forEach(cb=>cb.checked=false); calcScore(); clearSearch(); }
 
 /* ==========================
-   Buscador (despliega y resalta)
+   Buscador (complemento opcional)
    ========================== */
-const q=$('#q'), clearBtn=$('#clearQ');
-function normalize(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
-function clearSearch(){ q.value=''; $$('.row').forEach(r=>r.classList.remove('match')); }
-function doSearch(){
-  const term=normalize(q.value.trim());
-  $$('.row').forEach(r=>r.classList.remove('match'));
-  if(term.length<2) return; // evita ruido
-  const rows=$$('.row');
-  rows.forEach(row=>{
-    const n=normalize(row.dataset.name);
-    const c=row.dataset.codes||'';
-    if(n.includes(term) || c.includes(term)){
-      row.classList.add('match');
-      // abrir sub-details y details padres
-      const sub=row.closest('.sub-details'); if(sub) sub.open=true;
-      const top=row.closest('details'); if(top) top.open=true;
-      const cie = row.nextElementSibling; if(cie && cie.tagName.toLowerCase()==='details') cie.open=true;
-    }
-  });
-}
-q.addEventListener('input',()=>{ window.clearTimeout(q._t); q._t=setTimeout(doSearch,150); });
-clearBtn.addEventListener('click',()=>{ clearSearch(); });
+const q=document.addEventListener('DOMContentLoaded',()=>{ const input=$('#q'); const clearBtn=$('#clearQ'); function clearSearch(){ input.value=''; $$('.row').forEach(r=>r.classList.remove('match')); } window.clearSearch=clearSearch; function doSearch(){ const term=normalize(input.value.trim()); $$('.row').forEach(r=>r.classList.remove('match')); if(term.length<2) return; $$('.row').forEach(row=>{ const n=normalize(row.dataset.name); const c=row.dataset.codes||''; if(n.includes(term)||c.includes(term)){ row.classList.add('match'); const sub=row.closest('.sub-details'); if(sub) sub.open=true; const top=row.closest('details'); if(top) top.open=true; const cie=row.nextElementSibling; if(cie && cie.tagName.toLowerCase()==='details') cie.open=true; } }); } input.addEventListener('input',()=>{ window.clearTimeout(input._t); input._t=setTimeout(doSearch,150); }); clearBtn.addEventListener('click',()=>{ clearSearch(); }); });
 
 /* ==========================
    Pruebas (consola)
    ========================== */
 function tAssert(name,fn){ try{ const ok=!!fn(); console[ok?'log':'error'](`${ok?'[OK]':'[FALLA]'} ${name}`); return ok; }catch(e){ console.error(`[ERROR] ${name}:`,e); return false; }}
-function runConsoleTests(){
-  // 1) Conteo exacto de 52 condiciones (sumando items de todos los subgrupos)
-  tAssert('Total de condiciones = 52',()=> GROUPS.reduce((a,g)=>a+g.subgroups.reduce((b,sg)=>b+sg.items.length,0),0)===52 );
-  // 2) FA separada de otras arritmias
-  tAssert('FA/flutter separado de otras arritmias',()=> GROUPS.some(g=>g.subgroups.some(sg=>sg.items.some(i=>i.id==='fa'))) && GROUPS.some(g=>g.subgroups.some(sg=>sg.items.some(i=>i.id==='arritmias'))) );
-  // 3) DM 2 puntos incluye E10–E14.0–.9
-  tAssert('DM incluye E10–E14 (0–9)',()=> GROUPS.some(g=>g.points===2 && g.subgroups.some(sg=>sg.items.some(i=> i.id==='dm' && i.codes.includes('E10.0') && i.codes.includes('E14.9')))) );
-}
+function runConsoleTests(){ tAssert('Total de condiciones = 52',()=> GROUPS.reduce((a,g)=>a+g.subgroups.reduce((b,sg)=>b+sg.items.length,0),0)===52 ); tAssert('FA separada de otras arritmias',()=> GROUPS.some(g=>g.subgroups.some(sg=>sg.items.some(i=>i.id==='fa'))) && GROUPS.some(g=>g.subgroups.some(sg=>sg.items.some(i=>i.id==='arritmias'))) ); tAssert('DM incluye E10–E14 (0–9)',()=> GROUPS.some(g=>g.points===2 && g.subgroups.some(sg=>sg.items.some(i=> i.id==='dm' && i.codes.includes('E10.0') && i.codes.includes('E14.9')))) ); }
 
 // INIT
  document.addEventListener('DOMContentLoaded',()=>{ buildUI(); calcScore(); });
 </script>
 </body>
 </html>
-
 
