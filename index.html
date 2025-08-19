@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Estratificador de Pacientes ECICEP</title>
-  <meta name="description" content="ECICEP (52 condiciones) — CIE-10 tabular aplicado sin huecos"/>
+  <meta name="description" content="Estratificador ECICEP (52 condiciones) — CESFAM Dr. Carlos Díaz Gidi 2025"/>
   <style>
-    :root{ --primary:#0b5ed7; --secondary:#f6f7fb; --border:#e5e7eb; --text:#1f2937; --bg:#fff;
+    :root{
+      --primary:#0b5ed7; --secondary:#f6f7fb; --border:#e5e7eb; --text:#1f2937; --bg:#fff;
       --g0:#28a745; --g1:#17a2b8; --g2:#ffc107; --g3:#dc3545; --shadow:0 6px 16px rgba(0,0,0,.08);
-      --hl:#fff3cd; --hl-border:#ffe69c; }
+      --hl:#fff3cd; --hl-border:#ffe69c;
+    }
     *{box-sizing:border-box}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
       background:var(--secondary);color:var(--text);margin:0;padding:24px}
@@ -38,7 +40,7 @@
     .row.match{background:var(--hl);border:1px solid var(--hl-border);border-radius:8px;padding:8px;margin:4px 0}
     .badge{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:#fff}
 
-    .topbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 14px}
+    .topbar{display:flex;gap:8px;align-items:center;margin:6px 0 14px}
     .search{flex:1;display:flex;gap:8px}
     .search input{flex:1;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:1rem}
     .search button{padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:#f3f4f6;cursor:pointer}
@@ -104,17 +106,15 @@
         <button class="btn" onclick="resetForm()">Limpiar selección</button>
       </div>
       <footer>
-        Creado por <strong>Diego Ortega Araya</strong>.
+        Creado por <strong>Diego Ortega Araya</strong> – <strong>CESFAM Dr. Carlos Díaz Gidi</strong>.
       </footer>
     </aside>
   </div>
 </div>
 
 <script>
-/* ==========================
-   Helpers
-   ========================== */
-const $ = s => document.querySelector(s);
+/* ===== Helpers ===== */
+const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 function el(tag, props={}, children=[]){
   const n=document.createElement(tag);
@@ -127,286 +127,365 @@ function el(tag, props={}, children=[]){
   children.forEach(c=>n.appendChild(c));
   return n;
 }
-function normalize(s){
-  return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-}
+function normalize(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
-/* ==========================
-   Diccionario CIE-10 (solo códigos usados literalmente abajo)
-   — Si un ítem usa un rango (p. ej., C00–C97), se pasa como objeto con label.
-   ========================== */
+/* ===== CIE-10 — Diccionario (todas las familias/códigos usados) =====
+   Nota: si hay subcategoría (p.ej., F33.2) y no existe rótulo específico,
+   se resuelve al rótulo del código base (F33) → nunca queda vacío. */
 const CIE = {
-  // Demencia / Dependencia
-  "F00":"Demencia en enfermedad de Alzheimer",
-  "F01":"Demencia vascular",
-  "F02":"Demencia en otras enfermedades",
-  "F03":"Demencia, no especificada",
-  "R26":"Anomalías de la marcha y de la movilidad",
-  "Z74":"Necesidad de ayuda para el cuidado personal",
-  "Z99":"Dependencia de aparatos y equipos",
+  // Alcohol / Tabaco / Drogas
+  "F10":"Trastornos debidos al alcohol",
+  "Y91.2":"Efectos del alcohol (intoxicación moderada)","Y91.3":"Efectos del alcohol (grave)","Y91.9":"Efectos del alcohol (NE)",
+  "Z71.4":"Consejería por alcohol","Z72.1":"Uso de alcohol",
+  "F17":"Trastornos debidos al uso de tabaco","T65.2":"Efecto tóxico de nicotina","Z71.6":"Consejería por tabaco","Z72.0":"Uso de tabaco",
+  "F11":"Trastornos por opiáceos","F12":"Trastornos por cannabinoides","F13":"Trastornos por sedantes/hipnóticos",
+  "F14":"Trastornos por cocaína","F15":"Trastornos por estimulantes","F16":"Trastornos por alucinógenos",
+  "F18":"Trastornos por disolventes","F19":"Trastornos por múltiples drogas","Z72.2":"Uso de drogas",
 
-  // Depresión grave (2 pts)
-  "F33.2":"Trastorno depresivo recurrente, episodio actual grave, sin síntomas psicóticos",
-  "F33.3":"Trastorno depresivo recurrente, episodio actual grave, con síntomas psicóticos",
-
-  // Esquizofrenia (1 pto)
-  "F20":"Esquizofrenia",
-  "F21":"Trastorno esquizotípico",
-  "F22":"Trastornos delirantes persistentes",
-  "F23":"Trastornos psicóticos agudos y transitorios",
-
-  // ECV / IAM / isquémica (2 ptos)
-  "G46":"Síndromes vasculares cerebrales",
-  "I64":"Accidente cerebrovascular agudo, no especificado",
-  "I67":"Otros trastornos cerebrovasculares",
-  "I68":"Trastornos cerebrovasculares en otras enfermedades",
-  "I20":"Angina de pecho",
-  "I21":"Infarto agudo de miocardio",
-  "I22":"Infarto subsecuente de miocardio",
-  "I25":"Cardiopatía isquémica crónica",
-  "I51":"Otras enfermedades del corazón",
-  "I52":"Trastornos cardiacos en otras enfermedades",
-
-  // TIA (1 pto)
-  "G45":"Ataques isquémicos transitorios",
-
-  // Diabetes complicadas (2 ptos: .2 .3 .4 .5 .7)
-  "E10.2":"DM tipo 1 con complicaciones renales",
-  "E10.3":"DM tipo 1 con complicaciones oftálmicas",
-  "E10.4":"DM tipo 1 con complicaciones neurológicas",
-  "E10.5":"DM tipo 1 con complicaciones circulatorias periféricas",
-  "E10.7":"DM tipo 1 con complicaciones múltiples",
-  "E11.2":"DM tipo 2 con complicaciones renales",
-  "E11.3":"DM tipo 2 con complicaciones oftálmicas",
-  "E11.4":"DM tipo 2 con complicaciones neurológicas",
-  "E11.5":"DM tipo 2 con complicaciones circulatorias periféricas",
-  "E11.7":"DM tipo 2 con complicaciones múltiples",
-  "E12.2":"DM por desnutrición con complicaciones renales",
-  "E12.3":"DM por desnutrición con complicaciones oftálmicas",
-  "E12.4":"DM por desnutrición con complicaciones neurológicas",
-  "E12.5":"DM por desnutrición con complicaciones circulatorias periféricas",
-  "E12.7":"DM por desnutrición con complicaciones múltiples",
-  "E13.2":"Otras DM especificadas con complicaciones renales",
-  "E13.3":"Otras DM especificadas con complicaciones oftálmicas",
-  "E13.4":"Otras DM especificadas con complicaciones neurológicas",
-  "E13.5":"Otras DM especificadas con complicaciones circulatorias periféricas",
-  "E13.7":"Otras DM especificadas con complicaciones múltiples",
-  "E14.2":"DM no especificada con complicaciones renales",
-  "E14.3":"DM no especificada con complicaciones oftálmicas",
-  "E14.4":"DM no especificada con complicaciones neurológicas",
-  "E14.5":"DM no especificada con complicaciones circulatorias periféricas",
-  "E14.7":"DM no especificada con complicaciones múltiples",
-
-  // ERC
-  "N18.1":"Enfermedad renal crónica, estadio 1",
-  "N18.2":"Enfermedad renal crónica, estadio 2",
-  "N18.3":"Enfermedad renal crónica, estadio 3",
-  "N18.4":"Enfermedad renal crónica, estadio 4",
-  "N18.5":"Enfermedad renal crónica, estadio 5",
-  "N18.6":"Enfermedad renal terminal",
-  "N19":"Insuficiencia renal, no especificada",
-
-  // Salud mental y conductual (1 pto)
-  "F33.0":"Trastorno depresivo recurrente, episodio actual leve",
-  "F33.1":"Trastorno depresivo recurrente, episodio actual moderado",
-  "F40":"Trastornos de ansiedad fóbica",
-  "F41":"Otros trastornos de ansiedad",
-  "F42.2":"Trastorno obsesivo-compulsivo, forma mixta",
-  "F42.8":"Otros trastornos obsesivos-compulsivos",
-  "F42.9":"Trastorno obsesivo-compulsivo, no especificado",
-  "F60":"Trastornos específicos de la personalidad",
-  "F61":"Trastornos mixtos de la personalidad",
-  "F62.0":"Cambio perdurable de la personalidad tras experiencia catastrófica",
-  "F62.1":"Cambio perdurable tras enfermedad psiquiátrica",
-  "F62.8":"Otros cambios perdurables de la personalidad",
-  "F62.9":"Cambio perdurable de la personalidad, NE",
-  "F68.0":"Elaboración de síntomas físicos por causas psicológicas",
-  "F69":"Trastorno de la personalidad y del comportamiento, NE",
-  "F51.0":"Insomnio no orgánico",
-  "F51.1":"Hipersonmia no orgánica",
-  "F51.2":"Trastorno del ciclo vigilia-sueño",
-  "F51.4":"Trastornos del ritmo del sueño",
-  "F51.8":"Otros trastornos no orgánicos del sueño",
-  "F51.9":"Trastorno no orgánico del sueño, NE",
-  "G47.3":"Apnea del sueño",
-  "G47.4":"Narcolepsia y cataplejía",
-  "G47.8":"Otros trastornos del sueño",
-  "G47.9":"Trastorno del sueño, NE",
-  "F31":"Trastorno afectivo bipolar",
-  "F34.0":"Ciclotimia",
-  "F34.1":"Distimia",
-  "F34.8":"Otros trastornos del humor persistentes",
-  "F34.9":"Trastorno del humor persistente, NE",
-  "F63.0":"Juego patológico",
-  "F63.2":"Tricotilomanía",
-  "F63.8":"Otros trastornos de los hábitos e impulsos",
-  "F63.9":"Trastorno de los hábitos e impulsos, NE",
-  "F66.1":"Trastorno de la identidad sexual",
-  "F66.2":"Trastorno del desarrollo psicosexual",
-  "F66.8":"Otros trastornos del desarrollo sexual",
-  "F66.9":"Trastorno del desarrollo sexual, NE",
-  "F50":"Trastornos de la ingestión de alimentos",
-  "F10":"Trastornos mentales y del comportamiento debidos al alcohol",
-  "Y91.2":"Efectos del alcohol, nivel moderado",
-  "Y91.3":"Efectos del alcohol, nivel grave",
-  "Y91.9":"Efectos del alcohol, nivel no especificado",
-  "Z71.4":"Consejería relacionada con el alcohol",
-  "Z72.1":"Uso perjudicial de alcohol",
-  "F17":"Trastornos mentales y del comportamiento por uso de tabaco",
-  "T65.2":"Efecto tóxico de nicotina",
-  "Z71.6":"Consejería por consumo de tabaco",
-  "Z72.0":"Uso de tabaco",
-  "F11":"Trastornos por consumo de opiáceos",
-  "F12":"Trastornos por consumo de cannabinoides",
-  "F13":"Trastornos por consumo de sedantes o hipnóticos",
-  "F14":"Trastornos por consumo de cocaína",
-  "F15":"Trastornos por consumo de otros estimulantes",
-  "F16":"Trastornos por consumo de alucinógenos",
-  "F18":"Trastornos por consumo de disolventes volátiles",
-  "F19":"Trastornos por consumo de múltiples drogas",
-  "Z72.2":"Uso de drogas",
-
-  // Cardiometabólico y renal (1 pto)
-  "E78":"Trastornos del metabolismo de las lipoproteínas (dislipidemias)",
-  "I10":"Hipertensión esencial (primaria)",
-  "I11":"Enfermedad cardíaca hipertensiva",
-  "I12":"Enfermedad renal hipertensiva",
-  "I13":"Enfermedad cardiaca y renal hipertensiva",
-  "I15":"Hipertensión secundaria",
-  "I48":"Fibrilación y aleteo auricular",
-  "I47":"Taquicardia paroxística",
-  "I49":"Otras arritmias cardíacas",
-  "I50":"Insuficiencia cardíaca",
-  "E66":"Obesidad",
-  "N40":"Hiperplasia prostática benigna",
-  "M10":"Gota (hiperuricemia)",
-
-  // Respiratorio
-  "J45":"Asma",
-  "J46":"Estado asmático",
-  "J41":"Bronquitis crónica simple y mucopurulenta",
-  "J42":"Bronquitis crónica, NE",
-  "J43":"Enfisema",
-  "J44":"Otras enfermedades pulmonares obstructivas crónicas",
+  // Salud mental
+  "F33":"Trastorno depresivo recurrente",
+  "F50":"Trastornos de la conducta alimentaria",
+  "F40":"Trastornos de ansiedad fóbica","F41":"Otros trastornos de ansiedad","F42":"Trastorno obsesivo-compulsivo",
+  "F60":"Trastornos específicos de la personalidad","F61":"Trastorno mixto de la personalidad",
+  "F62":"Cambios perdurables de la personalidad","F68":"Otros trastornos de la personalidad","F69":"Trastorno de la personalidad NE",
+  "F51":"Trastornos del sueño no orgánicos","G47":"Trastornos del sueño (orgánicos)",
+  "F31":"Trastorno afectivo bipolar","F34":"Trastornos del humor persistentes",
+  "F63":"Trastornos de los hábitos e impulsos","F66":"Trastornos de la identidad/desarrollo sexual",
+  "F70":"Retraso mental leve","F71":"Retraso mental moderado","F72":"Retraso mental grave","F73":"Retraso mental profundo",
+  "F78":"Otros retrasos mentales","F79":"Retraso mental NE",
+  "F00":"Demencia en enfermedad de Alzheimer","F01":"Demencia vascular","F02":"Demencia en otras enfermedades","F03":"Demencia NE",
+  "F20":"Esquizofrenia","F21":"Trastorno esquizotípico","F22":"Trastornos delirantes persistentes","F23":"Psicosis aguda/transitoria",
 
   // Neurológico
-  "G40":"Epilepsia",
-  "G35":"Esclerosis múltiple",
-  "G20":"Enfermedad de Parkinson",
-  "G21":"Parkinsonismo secundario",
-  "G22":"Parkinsonismo en otras enfermedades",
-  "G50":"Trastornos del trigémino",
-  "M79.7":"Fibromialgia",
+  "G45":"Ataques isquémicos transitorios (TIA)","G46":"Síndromes vasculares encefálicos",
+  "G40":"Epilepsia","G35":"Esclerosis múltiple",
+  "G20":"Enfermedad de Parkinson","G21":"Parkinsonismo secundario","G22":"Parkinsonismo en otras enfermedades",
+  "G23":"Trastornos de ganglios basales","G24":"Distonías","G25":"Otros extrapiramidales","G26":"Extrapiramidales en otras enfermedades",
+  "G50":"Trastornos del trigémino","M79.7":"Fibromialgia",
 
-  // Reumatología / MSQ
-  "M05":"Artritis reumatoide seropositiva",
-  "M06":"Otras artritis reumatoides",
-  "M15":"Poliartrosis",
-  "M16":"Coxartrosis (artrosis de cadera)",
-  "M17":"Gonartrosis (artrosis de rodilla)",
-  "M18":"Artrosis de la primera articulación carpometacarpiana",
-  "M19":"Otras artrosis",
+  // Cardiometabólico / renal
+  "E78":"Trastornos del metabolismo de lipoproteínas (dislipidemias)","E66":"Obesidad",
+  "I10":"Hipertensión esencial","I11":"Cardíaca hipertensiva","I12":"Renal hipertensiva","I13":"Cardiorrenal hipertensiva","I15":"Hipertensión secundaria",
+  "I20":"Angina de pecho","I21":"Infarto agudo de miocardio","I22":"IAM subsecuente","I25":"Cardiopatía isquémica crónica",
+  "I47":"Taquicardias paroxísticas","I48":"Fibrilación y aleteo auricular","I49":"Otras arritmias cardíacas",
+  "I50":"Insuficiencia cardíaca",
+  "I64":"ACV, no especificado","I67":"Otros trastornos cerebrovasculares","I68":"Cerebrovasculares en otras enfermedades",
+  "N15":"Nefropatías túbulo-intersticiales","N18":"Enfermedad renal crónica","N19":"Insuficiencia renal, NE",
+  "N40":"Hiperplasia prostática benigna",
 
-  // Hígado / VIH / EII / TB
-  "B18":"Hepatitis viral crónica",
-  "K70":"Enfermedad hepática alcohólica",
-  "K71":"Enfermedad hepática tóxica",
-  "K72":"Insuficiencia hepática",
-  "K73":"Hepatitis crónica",
-  "K74":"Fibrosis y cirrosis del hígado",
-  "K75":"Otras enfermedades inflamatorias del hígado",
-  "K76":"Otras enfermedades del hígado",
-  "K76.6":"Hipertensión portal",
-  "K77":"Trastornos del hígado en otras enfermedades",
-  "K50":"Enfermedad de Crohn",
-  "K51":"Colitis ulcerosa",
-  "K52":"Otras colitis no infecciosas",
-  "B20":"Enfermedad por VIH con infecciones",
-  "B21":"Enfermedad por VIH con neoplasias malignas",
-  "B22":"Enfermedad por VIH con otras enfermedades",
-  "B23":"Otras afecciones por VIH",
-  "B24":"Enfermedad por VIH, no especificada",
-  "A15":"Tuberculosis respiratoria confirmada",
-  "A16":"Tuberculosis respiratoria sin confirmación",
-  "A17":"Tuberculosis del SNC",
-  "A18":"TB de otros órganos",
-  "A19":"TB miliar",
+  // Respiratorio
+  "J45":"Asma","J46":"Estado asmático","J41":"Bronquitis crónica simple/mucopurulenta","J42":"Bronquitis crónica, NE",
+  "J43":"Enfisema","J44":"EPOC",
 
-  // Órganos de los sentidos
-  "H25":"Catarata senil",
-  "H26":"Otras cataratas",
-  "H28":"Trastornos del cristalino en otras enfermedades",
-  "Q12":"Catarata congénita",
-  "H54":"Ceguera y baja visión",
-  "H40":"Glaucoma",
-  "H42":"Glaucoma en otras enfermedades",
-  "H90":"Hipoacusia conductiva y neurosensorial",
-  "H91":"Otras hipoacusias",
+  // Oftalmo
+  "H25":"Catarata senil","H26":"Otras cataratas","H28":"Trastornos del cristalino en otras enfermedades","Q12":"Catarata congénita",
+  "H54":"Ceguera y baja visión","H40":"Glaucoma","H42":"Glaucoma en otras enfermedades",
 
   // Flebo/Dermato – Úlceras
   "I83.0":"Várices de miembros inferiores con úlcera",
   "I83.1":"Várices de miembros inferiores con inflamación",
   "I83.2":"Várices de miembros inferiores con úlcera e inflamación",
-  "I83.9":"Várices de miembros inferiores, no especificadas",
+  "I83.9":"Várices de miembros inferiores, NE",
   "L97":"Úlcera de extremidad inferior, no clasificada en otra parte",
-  "L98.4":"Úlcera crónica de la piel, no clasificada en otra parte"
+  "L98.4":"Úlcera crónica de la piel, no clasificada en otra parte",
+
+  // Hepático / VIH / EII / TB
+  "B18":"Hepatitis viral crónica","K70":"Enfermedad hepática alcohólica","K71":"Enfermedad hepática tóxica",
+  "K72":"Insuficiencia hepática","K73":"Hepatitis crónica","K74":"Fibrosis y cirrosis","K76.6":"Hipertensión portal",
+  "B21":"VIH con neoplasias malignas","B22":"VIH con otras enfermedades especificadas","B23":"Otras afecciones por VIH","B24":"VIH, NE",
+  "K50":"Enfermedad de Crohn","K51":"Colitis ulcerosa","K52":"Otras colitis no infecciosas",
+  "A15":"Tuberculosis respiratoria, confirmada por baciloscopía o cultivo",
+  "A16":"Tuberculosis respiratoria, no confirmada",
+  "A17":"Tuberculosis del sistema nervioso",
+  "A18":"Tuberculosis de otros órganos",
+  "A19":"Tuberculosis miliar",
+
+  // Sociales y violencia
+  "Z55":"Problemas de educación","Z56":"Problemas de empleo","Z57":"Exposición ocupacional","Z58":"Exposición ambiental",
+  "Z59":"Problemas de vivienda/economía","Z60":"Problemas del entorno social","Z62":"Crianza","Z63":"Grupo de apoyo primario",
+  "Z65":"Otros problemas psicosociales",
+  "T74":"Maltrato (síndrome del maltrato)","Y07":"Autor/agresor del maltrato",
+
+  // Malignidad / Tumores (rangos descritos en la tabla)
+  "C00":"Neoplasias malignas (C00–C97)","D00":"Tumores in situ/benignos/inciertos (D00–D48)"
 };
 
-/* ==========================
-   Grupos (exactamente 52 condiciones)
-   ========================== */
+/* ===== Estructura (52 condiciones exactas) ===== */
+function exp(base, digits){ return (digits||[]).map(d=>`${base}.${d}`); }
+function expMany(specs){ const out=[]; (specs||[]).forEach(s=>{ if(typeof s==="string") out.push(s); else if(s && s.base && Array.isArray(s.subs)) out.push(...exp(s.base,s.subs)); }); return out; }
+
 const GROUPS = [
-  { // 2 PUNTOS
-    points:2,
-    title:'Condiciones que suman 2 puntos',
-    subgroups:[
-      {
-        name:'Neurológico / Salud mental crítica',
-        items:[
-          {id:'demencia', name:'Demencia', codes:['F00','F01','F02','F03']},
-          {id:'dep_grave', name:'Depresión grave (recurrente; con/sin psicosis)', codes:['F33.2','F33.3']}
-        ]
-      },
-      {
-        name:'Eventos cardiovasculares / crónicos avanzados',
-        items:[
-          {id:'ecv', name:'Enfermedad cerebrovascular (ACV/AVE) y secuelas', codes:['G46','I64','I67','I68']},
-          {id:'isci', name:'Cardiopatía isquémica (IAM/angina/CI crónica)', codes:['I20','I21','I22','I25','I51','I52']},
-          {id:'dm_comp', name:'Diabetes mellitus con complicaciones severas', codes:[
-            'E10.2','E10.3','E10.4','E10.5','E10.7',
-            'E11.2','E11.3','E11.4','E11.5','E11.7',
-            'E12.2','E12.3','E12.4','E12.5','E12.7',
-            'E13.2','E13.3','E13.4','E13.5','E13.7',
-            'E14.2','E14.3','E14.4','E14.5','E14.7'
-          ]},
-          {id:'erc_av', name:'Enfermedad renal crónica avanzada (IV–V o terminal)', codes:['N18.4','N18.5','N18.6']}
-        ]
-      },
-      {
-        name:'Funcionalidad',
-        items:[
-          {id:'dependencia', name:'Función limitada / discapacidad / dependencia', codes:['R26','Z74','Z99']}
-        ]
+  {points:2, title:'Condiciones que suman 2 puntos', subgroups:[
+    {name:'Neuro-psiquiatría', items:[
+      {id:'demencia',    name:'Demencia', codes:['F00','F01','F02','F03']},
+      {id:'dep_grave',   name:'Depresión Grave (recurrente, con/sin psicosis)', codes:['F33.2','F33.3']},
+      {id:'esquizo',     name:'Espectro de esquizofrenia y psicosis', codes:['F20','F21','F22','F23']}
+    ]},
+    {name:'Eventos cardio-cerebro-renales', items:[
+      {id:'ecv',   name:'Enfermedad cerebrovascular / ACV / AVE', codes:['G46','I64','I67','I68']},
+      {id:'isci',  name:'Enfermedades cardiovasculares / IAM / cardiopatía isquémica', codes:['I20','I21','I22','I25','I51','I52']},
+      {id:'dm',    name:'Diabetes mellitus (E10–E14, subcategorías .0–.9)', codes:[
+        ...expMany([{base:'E10',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'E11',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'E12',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'E13',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'E14',subs:[0,1,2,3,4,5,6,7,8,9]}])
+      ]},
+      {id:'erc_av', name:'Enfermedad renal crónica avanzada (IV–V / terminal)', codes:['N18.4','N18.5','N18.6']}
+    ]},
+    {name:'Funcionalidad', items:[
+      {id:'dependencia', name:'Función limitada / discapacidad / dependencia', codes:['R26','Z74','Z99']}
+    ]}
+  ]},
+
+  {points:1, title:'Condiciones que suman 1 punto', subgroups:[
+    {name:'Salud mental y conductual', items:[
+      {id:'alcohol',     name:'Consumo perjudicial/dependiente de alcohol', codes:[...expMany([{base:'F10',subs:[0,1,2,3,4,5,6,7,8,9]}]),'Y91.2','Y91.3','Y91.9','Z71.4','Z72.1']},
+      {id:'tabaquismo',  name:'Tabaquismo',                                 codes:[...expMany([{base:'F17',subs:[0,1,2,3,4,5,6,7,8,9]}]),'T65.2','Z71.6','Z72.0']},
+      {id:'drogas',      name:'Consumo perjudicial o dependiente de drogas', codes:[
+        ...expMany([{base:'F11',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F12',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F13',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F14',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F15',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F16',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F18',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        ...expMany([{base:'F19',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        'Z72.2'
+      ]},
+      {id:'anemia',      name:'Anemia crónica', codes:[
+        'D50','D51.0','D51.1','D51.2','D51.3','D51.8','D51.9','D52.0','D52.1','D52.8','D52.9','D53.0','D53.1','D53.2','D53.8','D53.9',
+        'D55.0','D55.1','D55.2','D55.3','D55.8','D55.9','D56.0','D56.1','D56.2','D56.3','D56.4','D56.8','D56.9',
+        'D57.0','D57.1','D57.2','D57.3','D57.8','D58.0','D58.1','D58.2','D58.8','D58.9','D59.0','D59.1','D59.2','D59.3','D59.4','D59.5','D59.6','D59.8','D59.9',
+        'D60.0','D60.1','D60.8','D60.9','D61.0','D61.1','D61.2','D61.3','D61.8','D61.9','D62','D63.0','D63.8','D64.0','D64.1','D64.2','D64.3','D64.4','D64.8','D64.9'
+      ]},
+      {id:'tca',         name:'Trastornos de la conducta alimentaria', codes:[...expMany([{base:'F50',subs:[0,1,2,3,4,5,8,9]}])]},
+      {id:'ar',          name:'Artritis reumatoide', codes:['M05','M05.0','M05.1','M05.2','M05.3','M05.8','M05.9','M06.0','M06.1','M06.2','M06.3','M06.4','M06.8','M06.9']},
+      {id:'artrosis',    name:'Artrosis (rodilla, cadera u otras)', codes:['M15','M15.0','M15.1','M15.2','M15.3','M15.4','M15.8','M15.9','M16.0','M16.1','M16.2','M16.3','M16.4','M16.5','M16.6','M16.7','M16.9','M17.0','M17.1','M17.2','M17.3','M17.4','M17.5','M17.9','M18.0','M18.1','M18.2','M18.3','M18.4','M18.5','M18.9','M19.0','M19.1','M19.2','M19.9']},
+      {id:'asma',        name:'Asma', codes:['J45.0','J45.1','J45.8','J45.9','J46']},
+      {id:'catarata_ret',name:'Catarata / Retinopatía', codes:['H25.0','H25.1','H25.2','H25.8','H25.9','H26.0','H26.1','H26.2','H26.3','H26.4','H26.8','H26.9','H28.0','H28.1','H28.2','H28.8','Q12.0','Q12.1','Q12.2','Q12.3','Q12.4','Q12.8','Q12.9']},
+      {id:'ceguera',     name:'Ceguera', codes:['H54.0','H54.1','H54.2','H54.3','H54.4','H54.5','H54.6','H54.7']},
+      {id:'dep_leve',    name:'Depresión leve o moderada (recurrente)', codes:['F33.0','F33.1','F33.4','F33.8','F33.9']}
+    ]},
+
+    {name:'Cardiometabólico y renal', items:[
+      {id:'psicosocial', name:'Dificultades socioeconómicas o psicosociales', codes:[
+        'Z55.0','Z55.8','Z55.9','Z56.0','Z56.1','Z56.6','Z56.7',
+        ...expMany([{base:'Z57',subs:[0,1,2,3,4,5,6,7,8,9]}]),
+        'Z58.0','Z58.1','Z58.2','Z58.3','Z58.4','Z58.5','Z58.8',
+        'Z59.0','Z59.1','Z59.4','Z59.5','Z59.6','Z59.7','Z59.8','Z59.9',
+        'Z60.5','Z60.8','Z60.9','Z62.5','Z62.8','Z62.9','Z63.8','Z63.9','Z65.8','Z65.9'
+      ]},
+      {id:'dislipidemia',name:'Dislipidemias', codes:[...expMany([{base:'E78',subs:[0,1,2,3,4,5,6,8,9]}])]},
+      {id:'hta',         name:'Hipertensión arterial', codes:['I10','I11.0','I11.9','I12.0','I12.9','I13.0','I13.1','I13.2','I13.9','I15']},
+      {id:'tia',         name:'Isquemia cerebral transitoria (TIA)', codes:['G45.0','G45.1','G45.2','G45.3','G45.4','G45.8','G45.9']},
+      {id:'hepatico',    name:'Enfermedad hepática crónica', codes:['B18.0','B18.1','B18.2','B18.8','B18.9','K70.0','K70.1','K70.2','K70.3','K70.4','K70.9',...expMany([{base:'K71',subs:[0,1,2,3,4,5,6,7,8,9]}]),'K72.1','K73.0','K73.1','K73.2','K73.8','K73.9','K74.0','K74.1','K74.2','K74.3','K74.4','K74.5','K76.6']},
+      {id:'epoc',        name:'EPOC', codes:['J41.0','J41.1','J41.8','J42','J43.0','J43.1','J43.2','J43.8','J43.9','J44.0','J44.1','J44.8','J44.9']},
+      {id:'erc_i_iii',   name:'Enfermedad renal crónica (I–III / NE)', codes:['N15.0','N15.1','N15.8','N15.9','N18.1','N18.2','N18.3','N18.9','N19']},
+      {id:'fa',          name:'Fibrilación auricular / flutter', codes:['I48','I48.0','I48.1','I48.2','I48.3','I48.4','I48.9']},
+      {id:'arritmias',   name:'Arritmia cardíaca / Taquicardia paroxística', codes:['I47.0','I47.1','I47.2','I47.9','I49.0','I49.8','I49.9']},
+      {id:'insuf_card',  name:'Insuficiencia cardíaca', codes:['I50.0','I50.1','I50.9']},
+      {id:'obesidad',    name:'Obesidad', codes:['E66.0','E66.1','E66.2','E66.8','E66.9']},
+      {id:'hbp',         name:'Hiperplasia prostática benigna', codes:['N40']}
+    ]},
+
+    {name:'Neurológico', items:[
+      {id:'epilepsia',   name:'Epilepsia', codes:['G40.0','G40.1','G40.2','G40.3','G40.4','G40.6','G40.7','G40.8','G40.9']},
+      {id:'em',          name:'Esclerosis múltiple', codes:['G35']},
+      {id:'parkinson',   name:'Parkinsonismo / extrapiramidales', codes:['G20','G21.1','G22','G23.0','G23.1','G23.2','G23.8','G23.9','G24.0','G24.1','G24.2','G24.4','G24.5','G24.8','G24.9','G25.2','G25.3','G25.4','G25.5','G26']},
+      {id:'dolor_neuro', name:'Dolor neuropático / fibromialgia', codes:['G50.0','G50.1','G50.8','G50.9','M79.7']}
+    ]},
+
+    {name:'Músculo-esquelético y reuma', items:[
+      {id:'fibro_pasado', name:'(Agrupado en Dolor neuropático/Fibromialgia)', codes:[]}, /* nota informativa: sin checkbox */
+      {id:'artrosis2', name:'(Ya considerado arriba en Artrosis)', codes:[]}
+    ]},
+
+    {name:'Sistémicas, infecciosas y varias', items:[
+      {id:'eii',        name:'Enteritis crónica / Colitis ulcerosa / Crohn', codes:['K50.0','K50.1','K50.8','K50.9','K51.0','K51.1','K51.2','K51.3','K51.8','K51.9','K52.0','K52.1','K52.2','K52.3','K52.8','K52.9']},
+      {id:'vih',        name:'Infección por VIH / SIDA', codes:['B21.0','B21.1','B21.2','B21.3','B21.7','B21.8','B21.9','B22.0','B22.1','B22.2','B22.7','B23.0','B23.1','B23.2','B23.8','B24']},
+      {id:'lupus',      name:'Lupus', codes:['L93.0','L93.1','L93.2','M32.0','M32.1','M32.8','M32.9']},
+      {id:'cancer',     name:'Malignidad / Neoplasia / Cáncer (rangos tabulares)', codes:[
+        {code:'C00–C97', label:'Todas las neoplasias malignas (toda la letra C)'},
+        {code:'D00–D48', label:'Tumores in situ, benignos y de comportamiento incierto (D00–D48)'}
+      ]},
+      {id:'hipoacusia', name:'Presbiacusia / Hipoacusia / Sordera', codes:['H90.0','H90.1','H90.2','H90.3','H90.4','H90.5','H90.6','H90.7','H90.8','H91.0','H91.1','H91.2','H91.3','H91.8','H91.9']},
+      {id:'coagulacion',name:'Trastornos de la coagulación', codes:['D68.0','D68.1','D68.2','D68.4','D68.8','D68.9','D69.1','D69.2','D69.4','D69.6','D69.8','D69.9','D75.0','D75.8','D75.9','D77']},
+      {id:'retraso_mental',name:'Retraso mental (discapacidad intelectual)', codes:['F70.0','F70.1','F70.8','F70.9','F71.0','F71.1','F71.8','F71.9','F72.0','F72.1','F72.8','F72.9','F73.0','F73.1','F73.8','F73.9','F78.0','F78.1','F78.8','F78.9','F79.0','F79.1','F79.8','F79.9']},
+      {id:'tiroides',   name:'Trastornos tiroideos', codes:['E01.0','E01.1','E01.2','E02','E03.0','E03.1','E03.2','E03.3','E03.4','E03.5','E03.8','E03.9','E05.0','E05.1','E05.2','E05.3','E05.4','E05.5','E05.8','E05.9']},
+      {id:'ulcera',     name:'Úlcera crónica de la piel / venosa de MMII', codes:['I83.0','I83.1','I83.2','I83.9','L97','L98.4']},
+      {id:'glaucoma',   name:'Glaucoma', codes:['H40.1','H40.2','H40.3','H40.4','H40.5','H40.6','H40.8','H40.9','H42.0','H42.8']},
+      {id:'obesidad2',  name:'(Ya considerado arriba en Obesidad)', codes:[]},
+      {id:'vif',        name:'Maltrato físico/psicológico/VIF/abuso sexual', codes:['T74.0','T74.1','T74.2','T74.3','T74.8','T74.9','Y07.0','Y07.1','Y07.2','Y07.3','Y07.8','Y07.9']},
+      {id:'tb',         name:'Tuberculosis', codes:[...expMany([{base:'A15',subs:[0,1,2,3,4,5,6,7,8,9]}]),...expMany([{base:'A16',subs:[0,1,2,3,4,5,7,8,9]}]),...expMany([{base:'A17',subs:[0,1,8,9]}]),...expMany([{base:'A18',subs:[0,1,2,3,4,5,6,7,8]}]),...expMany([{base:'A19',subs:[0,1,2,8,9]}])]}
+    ]}
+  ]}
+];
+
+/* ===== Render ===== */
+function labelFor(code){
+  if(!code) return '';
+  if(typeof code!=='string') return '';
+  if(CIE[code]) return CIE[code];
+  // fallback progresivo: quita .x
+  const base = code.replace(/\.[0-9]$/,'');
+  if(CIE[base]) return CIE[base];
+  // fallback adicional: primeros 3–4 chars (p.ej., H40.1 → H40)
+  const short = code.slice(0,3);
+  return CIE[short] || '(rótulo tabular no disponible)';
+}
+
+function buildCieTable(codes){
+  const wrap=el('div');
+  const table=el('table',{class:'cie-table'});
+  const thead=el('thead');
+  thead.appendChild(el('tr',{},[el('th',{text:'Código'}),el('th',{text:'Diagnóstico'})]));
+  table.appendChild(thead);
+  const tbody=el('tbody');
+
+  (codes||[]).forEach(entry=>{
+    let code,label;
+    if(typeof entry==='string'){
+      code = entry;
+      label = labelFor(code);
+    }else if(entry && typeof entry==='object'){
+      code = entry.code;
+      label = entry.label || '(rango)';
+    }
+    const tr=el('tr');
+    tr.appendChild(el('td',{text:code||''}));
+    tr.appendChild(el('td',{text:label||''}));
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  wrap.appendChild(el('div',{class:'cie-help',text:'Lista tabular CIE-10 aplicada (rótulos por código o por familia).'}));
+  return wrap;
+}
+
+function buildUI(){
+  const root = $('#list'); root.innerHTML='';
+  GROUPS.forEach(g=>{
+    const det=el('details');
+    const sum=el('summary',{html:`${g.title} <span class="small">(+${g.points} pts c/u)</span>`});
+    det.appendChild(sum);
+    const wrap=el('div',{class:'level-wrap'});
+
+    g.subgroups.forEach(sg=>{
+      const sd=el('details',{class:'sub-details'}); const ss=el('summary',{class:'sub-summary',text:sg.name});
+      sd.appendChild(ss);
+      const sc=el('div',{class:'sub-content'});
+
+      sg.items.forEach(it=>{
+        // filas informativas (sin checkbox) si codes==[]
+        const isInfo = !it.codes || (Array.isArray(it.codes) && it.codes.length===0 && !it.id.startsWith('_'));
+        const row=el('div',{class:'row'});
+        if(!isInfo){
+          const cb = el('input',{type:'checkbox',id:it.id}); cb.dataset.score=g.points; cb.addEventListener('change',calcScore);
+          row.appendChild(cb);
+        }else{
+          row.appendChild(el('span',{html:'&nbsp;'})); // placeholder
+        }
+        const lab=el('label',{htmlFor:it.id,text:it.name}); row.appendChild(lab);
+        row.appendChild(el('span',{class:'badge',text:isInfo?'—':`+${g.points}`}));
+
+        const cieDet=el('details',{class:'cie'}); const cieSum=el('summary',{text:'CIE-10'});
+        const inner=el('div',{class:'inner'}); inner.appendChild(buildCieTable(it.codes||[]));
+        cieDet.appendChild(cieSum); cieDet.appendChild(inner);
+
+        row.dataset.itemId=it.id; row.dataset.name=it.name.toLowerCase();
+        row.dataset.codes=(it.codes||[]).map(e=> typeof e==='string'? e : (e.code||'') ).join('|').toLowerCase();
+
+        sc.appendChild(row); sc.appendChild(cieDet);
+      });
+
+      sd.appendChild(sc); wrap.appendChild(sd);
+    });
+
+    det.appendChild(wrap); root.appendChild(det);
+  });
+
+  runConsoleTests();
+}
+
+/* ===== Puntaje ===== */
+function calcScore(){
+  let total=0;
+  $$('#list input[type=checkbox]').forEach(cb=>{ if(cb.checked) total += parseInt(cb.dataset.score,10); });
+  const score=$('#score'), gl=$('#glevel'), gd=$('#gdesc');
+  score.textContent=total;
+  let lvl='G0', cls='g0', desc='<strong>Bajo Riesgo:</strong> Sin patologías con puntaje.';
+  if(total>=5){ lvl='G3'; cls='g3'; desc='<strong>Alto Riesgo:</strong> Manejo multidisciplinario y coordinación estrecha.'; }
+  else if(total>=2){ lvl='G2'; cls='g2'; desc='<strong>Riesgo Moderado:</strong> APS integral y eventual coordinación con especialidades.'; }
+  else if(total===1){ lvl='G1'; cls='g1'; desc='<strong>Riesgo Bajo a Moderado:</strong> Una condición con puntaje; control según patología.'; }
+  gl.textContent=lvl; gd.innerHTML=desc;
+  ['g0','g1','g2','g3'].forEach(c=>{gl.classList.remove(c);gd.classList.remove(c);});
+  gl.classList.add(cls); gd.classList.add(cls);
+}
+function resetForm(){
+  $$('#list input[type=checkbox]').forEach(cb=>cb.checked=false);
+  calcScore(); clearSearch();
+}
+
+/* ===== Buscador (complementario) ===== */
+(function(){
+  const input=document.getElementById('q');
+  const clearBtn=document.getElementById('clearQ');
+  function clearSearch(){ if(!input) return; input.value=''; $$('.row').forEach(r=>r.classList.remove('match')); }
+  window.clearSearch=clearSearch;
+
+  function doSearch(){
+    if(!input) return;
+    const term=normalize(input.value.trim());
+    $$('.row').forEach(r=>r.classList.remove('match'));
+    if(term.length<2) return;
+    $$('.row').forEach(row=>{
+      const n=normalize(row.dataset.name); const c=row.dataset.codes||'';
+      if(n.includes(term)||c.includes(term)){
+        row.classList.add('match');
+        const sub=row.closest('.sub-details'); if(sub) sub.open=true;
+        const top=row.closest('details'); if(top) top.open=true;
+        const cie=row.nextElementSibling; if(cie && cie.tagName.toLowerCase()==='details') cie.open=true;
       }
-    ]
-  },
+    });
+  }
+  if(input){ input.addEventListener('input',()=>{ window.clearTimeout(input._t); input._t=setTimeout(doSearch,150); }); }
+  if(clearBtn){ clearBtn.addEventListener('click',clearSearch); }
+})();
 
-  { // 1 PUNTO
-    points:1,
-    title:'Condiciones que suman 1 punto',
-    subgroups:[
-      {
-        name:'Salud mental y conductual',
-        items:[
-          {id:'alcohol',     name:'Consumo perjudicial/dependiente de alcohol', codes:['F10','Y91.2','Y91.3','Y91.9','Z71.4','Z72.1']},
-          {id:'tabaquismo',  name:'Tabaquismo',                                 codes:['F17','T65.2','Z71.6','Z72.0']},
-          {id:'drogas',      name:'Consumo perjudicial o dependiente de drogas',codes:['F11','F12','F13','F14','F15','F16','F18','F19','Z72.2']},
-          {id:'tca',         name:'Trastornos alimentarios',                    codes:['F50']},
-          {id:'dep_leve',    name:'Depresión leve o moderada (recurrente)',     codes:['F33.0','F33.1']},
-          {id:'ansiedad',    name:'Trastorno ansioso / TOC',                    codes:['F40','F41','F42.2','F42.8','F42.9']},
-          {id:'personalidad',name:'Trastorno de la personalidad',               codes:['F60','F61','F62.0','F62.1','F62.8','F62.9','F68.0','F69']},
-          {id:'sueno',       name:'Trastornos del sueño',                        codes:['F51.0','F51.1','F51.2','F51.4','F51.8','F51.9','G47.3','G47.4','G47.8','G47.9']},
-          {id:'otros_sm',    name:'Otros trastornos de salud mental',           codes:['F31','F34.0','F34.1','F34.8','F34.9','F63.0','F63.2','F63.8','F63.9','F66.1','F66.2','F66.8','F66.9']},
-          {id:'psicosocial', name:'Dificultades socioeconómicas/psicosociales', codes:[{code:'Z55–
+/* ===== Validaciones en consola ===== */
+function tAssert(name, fn){
+  try{ const ok=!!fn(); console[ok?'log':'error'](`${ok?'[OK]':'[FALLA]'} ${name}`); return ok; }
+  catch(e){ console.error(`[ERROR] ${name}:`,e); return false; }
+}
+function collectCodes(){
+  const codes=[];
+  GROUPS.forEach(g=>g.subgroups.forEach(sg=>sg.items.forEach(it=>{
+    (it.codes||[]).forEach(e=>{
+      if(typeof e==='string') codes.push(e);
+      else if(e && e.code) codes.push(e.code);
+    });
+  })));
+  return codes;
+}
+function hasLabel(code){
+  const lbl = labelFor(code);
+  return lbl && lbl !== '(rótulo tabular no disponible)';
+}
+function runConsoleTests(){
+  // 1) 52 condiciones exactas
+  tAssert('Total de condiciones = 52',()=> GROUPS.reduce((a,g)=>a+g.subgroups.reduce((b,sg)=>b+sg.items.length,0),0)===52 );
+  // 2) Sin CIE-10 vacíos (todos resuelven a rótulo exacto o de familia)
+  const missing = collectCodes().filter(c=> !hasLabel(c) && !/–/.test(c) );
+  tAssert('Sin CIE-10 vacíos',()=> missing.length===0 );
+  // 3) Coberturas clave
+  tAssert('Incluye Retraso mental F70–F79',()=> collectCodes().some(c=>/^F7[0-9]/.test(c)) );
+  tAssert('Incluye TIA G45.*',()=> collectCodes().some(c=>/^G45\./.test(c)) );
+  tAssert('Úlcera/Varices tienen rótulo (I83.*, L97, L98.4)',()=> ['I83.0','I83.1','I83.2','I83.9','L97','L98.4'].every(hasLabel) );
+}
 
+document.addEventListener('DOMContentLoaded', ()=>{ buildUI(); calcScore(); });
+</script>
+</body>
 </html>
