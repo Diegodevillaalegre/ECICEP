@@ -670,40 +670,49 @@ function buildCieTable(codes){
 function buildUI(){
   const root = $('#list'); root.innerHTML='';
   GROUPS.forEach(g=>{
-    const det=el('details');
+    const det=el('details'); // principal (cerrado por defecto)
     const sum=el('summary',{html:`${g.title} <span class="small">(+${g.points} pts c/u)</span>`});
     det.appendChild(sum);
     const wrap=el('div',{class:'level-wrap'});
 
     g.subgroups.forEach(sg=>{
-      const sd=el('details',{class:'sub-details', open:true});
+      const sd=el('details',{class:'sub-details'}); // 🔹 sin open:true
       const ss=el('summary',{class:'sub-summary',text:sg.name});
       sd.appendChild(ss);
       const sc=el('div',{class:'sub-content'});
 
       sg.items.forEach(it=>{
         const row=el('div',{class:'row'});
-        const cb = el('input',{type:'checkbox',id:it.id}); cb.dataset.score=g.points; cb.addEventListener('change',calcScore);
+        const cb = el('input',{type:'checkbox',id:it.id}); 
+        cb.dataset.score=g.points; 
+        cb.addEventListener('change',calcScore);
         row.appendChild(cb);
-        const lab=el('label',{htmlFor:it.id,text:it.name}); row.appendChild(lab);
+        const lab=el('label',{htmlFor:it.id,text:it.name}); 
+        row.appendChild(lab);
         row.appendChild(el('span',{class:'badge',text:`+${g.points}`}));
 
-        const cieDet=el('details',{class:'cie'}); const cieSum=el('summary',{text:'CIE-10'});
-        const inner=el('div',{class:'inner'}); inner.appendChild(buildCieTable(it.codes||[]));
-        cieDet.appendChild(cieSum); cieDet.appendChild(inner);
+        const cieDet=el('details',{class:'cie'}); 
+        const cieSum=el('summary',{text:'CIE-10'});
+        const inner=el('div',{class:'inner'}); 
+        inner.appendChild(buildCieTable(it.codes||[]));
+        cieDet.appendChild(cieSum); 
+        cieDet.appendChild(inner);
 
-        row.dataset.itemId=it.id; row.dataset.name=it.name.toLowerCase();
+        row.dataset.itemId=it.id; 
+        row.dataset.name=it.name.toLowerCase();
         row.dataset.codes=(it.codes||[]).map(e=> typeof e==='string'? e : (e.code||'') ).join('|').toLowerCase();
 
-        sc.appendChild(row); sc.appendChild(cieDet);
+        sc.appendChild(row); 
+        sc.appendChild(cieDet);
       });
-      sd.appendChild(sc); wrap.appendChild(sd);
+      sd.appendChild(sc); 
+      wrap.appendChild(sd);
     });
-    det.appendChild(wrap); root.appendChild(det);
+    det.appendChild(wrap); 
+    root.appendChild(det);
   });
   runConsoleTests();
 }
-
 /* ===== Puntaje ===== */
 function calcScore(){
   let total=0;
